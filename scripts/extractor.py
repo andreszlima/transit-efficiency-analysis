@@ -81,6 +81,7 @@ def main():
                     ON CONFLICT (trip_id, stop_sequence, stop_id, departure_time, arrival_time) DO NOTHING
                 """)
                 conn.execute(insert_query, row.to_dict())
+                conn.commit()
         print('Data inserted.')
     except Exception as e:
         print(f"Error occurred while inserting data into the database: {e}")
