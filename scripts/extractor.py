@@ -72,15 +72,19 @@ def main():
     df['file_source'] = timestamp
 
     # Insert data into the database
-    with engine.connect() as conn:
-        for _, row in df.iterrows():
-            insert_query = text("""
-                INSERT INTO trip_updates (trip_id, stop_sequence, stop_id, departure_time, arrival_time, file_source)
-                VALUES (:trip_id, :stop_sequence, :stop_id, :departure_time, :arrival_time, :file_source)
-                ON CONFLICT (trip_id, stop_sequence, stop_id, departure_time, arrival_time) DO NOTHING
-            """)
-            conn.execute(insert_query, row.to_dict())
-    print('Data inserted.')
+    try:
+        with engine.connect() as conn:
+            for _, row in df.iterrows():
+                insert_query = text("""
+                    INSERT INTO trip_updates (trip_id, stop_sequence, stop_id, departure_time, arrival_time, file_source)
+                    VALUES (:trip_id, :stop_sequence, :stop_id, :departure_time, :arrival_time, :file_source)
+                    ON CONFLICT (trip_id, stop_sequence, stop_id, departure_time, arrival_time) DO NOTHING
+                """)
+                conn.execute(insert_query, row.to_dict())
+        print('Data inserted.')
+    except Exception as e:
+        print(f"Error occurred while inserting data into the database: {e}")
+
 
 if __name__ == "__main__":
     main()
