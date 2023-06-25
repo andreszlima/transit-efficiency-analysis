@@ -47,6 +47,7 @@ def main():
         stops_df = pd.read_csv(zf.open('stops.txt'))
         routes_df = pd.read_csv(zf.open('routes.txt'))
 
+        count = 0
         for chunk in stop_times_df:
             # Merge dataframes
             df = (chunk
@@ -64,6 +65,11 @@ def main():
             
             # Insert data into the database
             df.to_sql('gtfs_data', con=engine, if_exists='append', index=False)
+            
+            # Print progress
+            count += chunk_size
+            print(f'{count} chunks have been processed and inserted.')
+            
     print('Data parsed and inserted.')
 
 
