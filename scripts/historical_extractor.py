@@ -15,6 +15,8 @@ url = "https://sudbury.tmix.se/gtfs/gtfs.zip"
 # Database connection string
 db_string = os.getenv("DB_URL")
 
+# Chunk size
+chunk_size = 5000  # Adjust as necessary depending on your server's resources
 
 def parse_date_and_time(date_str, time_str):
     hour, minute, second = map(int, time_str.split(':'))
@@ -38,40 +40,31 @@ def main():
     # Extract and parse data
     print('Extracting and parsing data...')
     with zipfile.ZipFile(io.BytesIO(response.content)) as zf:
-        with zf.open('stop_times.txt') as f:
-            stop_times_df = pd.read_csv(f)
+        # Read in dataframes
+        stop_times_df = pd.read_csv(zf.open('stop_times.txt'), chunksize=chunk_size)
+        trips_df = pd.read_csv(zf.open('trips.txt'))
+        calendar_dates_df = pd.read_csv(zf.open('calendar_dates.txt'))
+        stops_df = pd.read_csv(zf.open('stops.txt'))
+        routes_df = pd.read_csv(zf.open('routes.txt'))
 
-        with zf.open('trips.txt') as f:
-            trips_df = pd.read_csv(f)
+        for chunk in stop_times_df:
+            # Merge dataframes
+            df = (chunk
+                  .merge(trips_df, on='trip_id')
+                  .merge(calendar_dates_df, on='service_id')
+                  .merge(stops_df, on='stop_id')
+                  .merge(routes_df, on='route_id'))
 
-        with zf.open('calendar_dates.txt') as f:
-            calendar_dates_df = pd.read_csv(f)
+            # Convert arrival_time and departure_time to timestamp
+            df['arrival_time'] = df.apply(lambda row: parse_date_and_time(str(row['date']), row['arrival_time']), axis=1)
+            df['departure_time'] = df.apply(lambda row: parse_date_and_time(str(row['date']), row['departure_time']), axis=1)
 
-        with zf.open('stops.txt') as f:
-            stops_df = pd.read_csv(f)
-
-        with zf.open('routes.txt') as f:
-            routes_df = pd.read_csv(f)
-
-    # Merge dataframes
-    df = (stop_times_df
-          .merge(trips_df, on='trip_id')
-          .merge(calendar_dates_df, on='service_id')
-          .merge(stops_df, on='stop_id')
-          .merge(routes_df, on='route_id'))
-
-    # Convert arrival_time and departure_time to timestamp
-    df['arrival_time'] = df.apply(lambda row: parse_date_and_time(str(row['date']), row['arrival_time']), axis=1)
-    df['departure_time'] = df.apply(lambda row: parse_date_and_time(str(row['date']), row['departure_time']), axis=1)
-
-    # Select columns
-    df = df[['trip_id', 'stop_sequence', 'stop_id', 'route_id', 'stop_name', 'route_long_name', 'arrival_time', 'departure_time']]
-    print('Data parsed.')
-
-    # Insert data into the database
-    print('Inserting data into the database...')
-    df.to_sql('gtfs_data', con=engine, if_exists='replace', index=False)
-    print('Data inserted.')
+            # Select columns
+            df = df[['trip_id', 'stop_sequence', 'stop_id', 'route_id', 'stop_name', 'route_long_name', 'arrival_time', 'departure_time']]
+            
+            # Insert data into the database
+            df.to_sql('gtfs_data', con=engine, if_exists='append', index=False)
+    print('Data parsed and inserted.')
 
 
 if __name__ == "__main__":
