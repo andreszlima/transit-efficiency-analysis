@@ -76,7 +76,7 @@ def main():
                 VALUES (:trip_id, :stop_sequence, :stop_id, :departure_time, :arrival_time, :file_source)
                 ON CONFLICT (trip_id, stop_sequence, stop_id, departure_time, arrival_time) DO NOTHING
             """)
-            conn.execute(insert_query, **row.to_dict())
+            conn.execute(insert_query, row.to_dict())
     print('Data inserted.')
 
 if __name__ == "__main__":
