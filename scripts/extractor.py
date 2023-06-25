@@ -63,8 +63,6 @@ def main():
         print(f"Error occurred while parsing data: {e}")
         return
 
-    # Log the first 5 rows of parsed data
-    print(df.head(5))
 
     # Save individual snapshot
     timestamp = pd.Timestamp.now(tz='America/Toronto')
@@ -78,7 +76,8 @@ def main():
                 insert_query = text("""
                     INSERT INTO trip_updates (trip_id, stop_sequence, stop_id, departure_time, arrival_time, file_source)
                     VALUES (:trip_id, :stop_sequence, :stop_id, :departure_time, :arrival_time, :file_source)
-                    ON CONFLICT (trip_id, stop_sequence, stop_id, departure_time, arrival_time) DO NOTHING
+                    ON CONFLICT (trip_id, stop_sequence, stop_id, departure_time, arrival_time) 
+                    DO UPDATE SET file_source = EXCLUDED.file_source
                 """)
                 conn.execute(insert_query, row.to_dict())
                 conn.commit()
