@@ -62,7 +62,10 @@ def main():
     except Exception as e:
         print(f"Error occurred while parsing data: {e}")
         return
-    
+
+    # Log the first 5 rows of parsed data
+    print(df.head(5))
+
     # Save individual snapshot
     timestamp = pd.Timestamp.now(tz='America/Toronto')
     print(f'Inserting data with source {timestamp}...')
