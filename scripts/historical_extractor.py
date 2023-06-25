@@ -4,7 +4,8 @@ import pandas as pd
 import zipfile
 import io
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text, Table, MetaData
+from sqlalchemy.orm import sessionmaker
 
 # Load environment variables
 load_dotenv()
@@ -18,19 +19,20 @@ db_string = os.getenv("DB_URL")
 # Chunk size
 chunk_size = 5000  # Adjust as necessary depending on your server's resources
 
-def parse_date_and_time(date_str, time_str):
-    hour, minute, second = map(int, time_str.split(':'))
-    date = pd.to_datetime(date_str, format="%Y%m%d")
-    if hour >= 24:
-        hour -= 24
-        date += pd.Timedelta(days=1)
-    timestamp = pd.Timestamp(year=date.year, month=date.month, day=date.day, hour=hour, minute=minute, second=second)
-    return timestamp.tz_localize('UTC').tz_convert('America/Toronto')
-
+def parse_date_and_time_vectorized(dates, times):
+    hours, minutes, seconds = zip(*[map(int, time.split(':')) for time in times])
+    hours = pd.Series(hours)
+    dates = pd.to_datetime(dates, format="%Y%m%d")
+    dates += pd.to_timedelta((hours // 24).astype(int), unit='d')
+    hours %= 24
+    timestamps = pd.to_datetime(dates.astype(str) + ' ' + hours.astype(str) + ':' + pd.Series(minutes).astype(str) + ':' + pd.Series(seconds).astype(str))
+    return timestamps.dt.tz_localize('UTC').dt.tz_convert('America/Toronto')
 
 def main():
-    # Create engine
+    # Create engine and session
     engine = create_engine(db_string)
+    Session = sessionmaker(bind=engine)
+    session = Session()
 
     # Download data
     print('Downloading data...')
@@ -57,21 +59,28 @@ def main():
                   .merge(routes_df, on='route_id'))
 
             # Convert arrival_time and departure_time to timestamp
-            df['arrival_time'] = df.apply(lambda row: parse_date_and_time(str(row['date']), row['arrival_time']), axis=1)
-            df['departure_time'] = df.apply(lambda row: parse_date_and_time(str(row['date']), row['departure_time']), axis=1)
+            df['arrival_time'] = parse_date_and_time_vectorized(df['date'].astype(str), df['arrival_time'])
+            df['departure_time'] = parse_date_and_time_vectorized(df['date'].astype(str), df['departure_time'])
 
             # Select columns
             df = df[['trip_id', 'stop_sequence', 'stop_id', 'route_id', 'stop_name', 'route_long_name', 'arrival_time', 'departure_time']]
             
             # Insert data into the database
-            df.to_sql('gtfs_data', con=engine, if_exists='append', index=False)
+            for row in df.itertuples(index=False):
+                insert_query = text("""INSERT INTO gtfs_data (trip_id, stop_sequence, stop_id, route_id, stop_name, route_long_name, arrival_time, departure_time) 
+                                    VALUES (:trip_id, :stop_sequence, :stop_id, :route_id, :stop_name, :route_long_name, :arrival_time, :departure_time) 
+                                    ON CONFLICT DO NOTHING""")
+                session.execute(insert_query, dict(row._asdict()))
             
             # Print progress
             count += chunk_size
             print(f'{count} chunks have been processed and inserted.')
-            
-    print('Data parsed and inserted.')
 
+            # Commit the transaction
+            session.commit()
+
+    print('Data parsed and inserted.')
+    session.close()
 
 if __name__ == "__main__":
     main()
