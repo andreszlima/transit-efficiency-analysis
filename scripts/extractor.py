@@ -77,7 +77,7 @@ def main():
                     INSERT INTO trip_updates (trip_id, stop_sequence, stop_id, departure_time, arrival_time, file_source)
                     VALUES (:trip_id, :stop_sequence, :stop_id, :departure_time, :arrival_time, :file_source)
                     ON CONFLICT (trip_id, stop_sequence, stop_id, departure_time, arrival_time) 
-                    DO UPDATE SET file_source = EXCLUDED.file_source
+                    DO NOTHING
                 """)
                 conn.execute(insert_query, row.to_dict())
                 conn.commit()
