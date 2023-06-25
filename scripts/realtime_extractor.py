@@ -80,7 +80,7 @@ def main():
                     DO NOTHING
                 """)
                 conn.execute(insert_query, row.to_dict())
-                conn.commit()
+            conn.commit()
         print('Data inserted.')
     except Exception as e:
         print(f"Error occurred while inserting data into the database: {e}")

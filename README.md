@@ -1,5 +1,7 @@
 # Sudbury Transit Efficiency Analysis
 
+![People leaving bus](public/canada%20bus.png?raw=true "Sudbury Transit Efficiency Analysis")
+
 ## Project Description
 This project aims to analyze the efficiency and effectiveness of Sudbury's bus service. Leveraging publicly available data, the analysis is structured around three main objectives: 
 
