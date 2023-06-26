@@ -22,7 +22,7 @@ Historical data, which is stored in `gtfs_data` table, provides general informat
 ## Setup & Execution
 
 1. **Environment Setup:**
-    The project uses environment variables for configuration. These can be set manually, but for ease of use, it's recommended to store them in an `.env` file. This file should not be committed to version control.
+    The project uses environment variables for configuration. These can be set manually, but for ease of use, it's recommended to store them in an `.env` file. The python scripts will search for this file inside `scripts` folder. This file should not be committed to version control.
 
     Here's a sample `.env` file with all required variables:
 
