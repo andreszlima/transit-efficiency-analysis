@@ -72,6 +72,8 @@ Historical data, which is stored in `gtfs_data` table, provides general informat
         departure_time timestamp with time zone NOT NULL DEFAULT '1970-01-01 02:00:00-03'::timestamp with time zone,
         arrival_time timestamp with time zone NOT NULL DEFAULT '1970-01-01 02:00:00-03'::timestamp with time zone,
         file_source timestamp with time zone NOT NULL,
+        CONSTRAINT trip_updates_pkey PRIMARY KEY (trip_id, stop_sequence, stop_id, departure_time, arrival_time),
+        CONSTRAINT trip_updates_uniq UNIQUE (trip_id, stop_sequence, stop_id, departure_time, arrival_time),
         CONSTRAINT trip_updates_unique UNIQUE (trip_id, stop_sequence, stop_id, departure_time, arrival_time)
     );
     ```
@@ -86,7 +88,8 @@ Historical data, which is stored in `gtfs_data` table, provides general informat
         stop_name text COLLATE pg_catalog."default",
         route_long_name text COLLATE pg_catalog."default",
         arrival_time timestamp with time zone,
-        departure_time timestamp with time zone
+        departure_time timestamp with time zone,
+        CONSTRAINT gtfs_data_pkey PRIMARY KEY (trip_id, stop_sequence, stop_id, route_id, stop_name, route_long_name)
     );
     ```
 
