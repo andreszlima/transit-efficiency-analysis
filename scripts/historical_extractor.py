@@ -14,7 +14,7 @@ load_dotenv()
 url = "https://sudbury.tmix.se/gtfs/gtfs.zip"
 
 # Database connection string
-db_string = os.getenv("REMOTE_DB_URL")
+db_string = os.getenv("LOCAL_DB_URL")
 
 # The table name can be replaced
 table_name = os.getenv("HISTORICAL_TABLE")

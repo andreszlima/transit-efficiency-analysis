@@ -22,14 +22,15 @@ Historical data, which is stored in `gtfs_data` table, provides general informat
 ## Setup & Execution
 
 1. **Environment Setup:**
-    The project uses environment variables for configuration. These can be set manually, but for ease of use, it's recommended to store them in an `.env` file. This file should not be committed to version control. Replace `<Your Remote DB Username>` and other placeholders with your actual values.
+    The project uses environment variables for configuration. These can be set manually, but for ease of use, it's recommended to store them in an `.env` file. This file should not be committed to version control.
 
     Here's a sample `.env` file with all required variables:
 
     ```dotenv
     # Variables required to run the extractor scripts
-    # Remote database credentials
+    # Remote database username
     REMOTE_DB_USERNAME=<Your Remote DB Username>
+    # Remote database password
     REMOTE_DB_PASSWORD=<Your Remote DB Password>
     # Remote database connection string. Replace 'localhost' with your DB host and 'transit_data' with your DB name
     REMOTE_DB_URL=postgresql://${REMOTE_DB_USERNAME}:${REMOTE_DB_PASSWORD}@localhost:5432/transit_data
@@ -43,20 +44,26 @@ Historical data, which is stored in `gtfs_data` table, provides general informat
     REMOTE_DB_NAME=transit_data
     # Name of the local database
     LOCAL_DB_NAME=transit_data
+    # Local database username
+    LOCAL_DB_USERNAME=<Your Local DB Username>
+    # Local database password
+    LOCAL_DB_PASSWORD=<Your Local DB Password>
+    # Local database connection string. Replace 'localhost' with your DB host and 'transit_data' with your DB name
+    LOCAL_DB_URL=postgresql://${LOCAL_DB_USERNAME}:${LOCAL_DB_PASSWORD}@localhost:5432/transit_data
     # VPS username
     VPS_USERNAME=<Your VPS Username>
     # VPS server IP
     VPS_SERVER_IP=<Your VPS Server IP>
     # Path to the dump file in the VPS
     VPS_REMOTE_DUMP_FILE_PATH=<Path to the dump file in the VPS>
-    # Path to the dump file in the local machine
+    # Path to the dump file in your local machine
     LOCAL_DUMP_FILE_PATH=<Path to the dump file in your local machine>
-    # Path to the private key file
+    # Path to your private key file
     PRIVATE_KEY_PATH=<Path to your private key file>
-    # Local DB username
-    LOCAL_DB_USERNAME=<Your Local DB Username>
-    # Local DB password
-    LOCAL_DB_PASSWORD=<Your Local DB Password>
+    ```
+
+    Be sure to replace all `<Your ...>` placeholders with your actual data.
+
 
 2. **Database Setup:**
     You need to create two tables in your PostgreSQL database: `trip_updates` for the realtime data and `gtfs_data` for the historical data.
