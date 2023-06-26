@@ -27,7 +27,6 @@ Historical data, which is stored in `gtfs_data` table, provides general informat
     Here's a sample `.env` file with all required variables:
 
     ```dotenv
-    # Variables required to run the extractor scripts
     # Remote database username
     REMOTE_DB_USERNAME=<Your Remote DB Username>
     # Remote database password
@@ -38,8 +37,6 @@ Historical data, which is stored in `gtfs_data` table, provides general informat
     REALTIME_TABLE=trip_updates
     # Table name of historical data
     HISTORICAL_TABLE=gtfs_data
-
-    # Variables required to run the loader scripts
     # Name of the remote database
     REMOTE_DB_NAME=transit_data
     # Name of the local database
