@@ -14,7 +14,10 @@ load_dotenv()
 url = "https://sudbury.tmix.se/gtfs/gtfs.zip"
 
 # Database connection string
-db_string = os.getenv("DB_URL")
+db_string = os.getenv("REMOTE_DB_URL")
+
+# The table name can be replaced
+table_name = os.getenv("HISTORICAL_TABLE")
 
 # Chunk size
 chunk_size = 5000  # Adjust as necessary depending on your server's resources
@@ -67,7 +70,7 @@ def main():
             
             # Insert data into the database
             for row in df.itertuples(index=False):
-                insert_query = text("""INSERT INTO gtfs_data (trip_id, stop_sequence, stop_id, route_id, stop_name, route_long_name, arrival_time, departure_time) 
+                insert_query = text(f"""INSERT INTO {table_name} (trip_id, stop_sequence, stop_id, route_id, stop_name, route_long_name, arrival_time, departure_time) 
                                     VALUES (:trip_id, :stop_sequence, :stop_id, :route_id, :stop_name, :route_long_name, :arrival_time, :departure_time) 
                                     ON CONFLICT DO NOTHING""")
                 session.execute(insert_query, dict(row._asdict()))

@@ -16,8 +16,10 @@ load_dotenv()
 url = "https://sudbury.tmix.se/gtfs-realtime/tripupdates.pb"
 
 # Database connection string
-db_string = os.getenv("DB_URL")
+db_string = os.getenv("REMOTE_DB_URL")
 
+# The table name can be replaced
+table_name = os.getenv("REALTIME_TABLE")
 
 def parse_pb_data(data):
     feed = gtfs_realtime_pb2.FeedMessage()
@@ -63,7 +65,6 @@ def main():
         print(f"Error occurred while parsing data: {e}")
         return
 
-
     # Save individual snapshot
     timestamp = pd.Timestamp.now(tz='America/Toronto')
     print(f'Inserting data with source {timestamp}...')
@@ -73,8 +74,8 @@ def main():
     try:
         with engine.connect() as conn:
             for _, row in df.iterrows():
-                insert_query = text("""
-                    INSERT INTO trip_updates (trip_id, stop_sequence, stop_id, departure_time, arrival_time, file_source)
+                insert_query = text(f"""
+                    INSERT INTO {table_name} (trip_id, stop_sequence, stop_id, departure_time, arrival_time, file_source)
                     VALUES (:trip_id, :stop_sequence, :stop_id, :departure_time, :arrival_time, :file_source)
                     ON CONFLICT (trip_id, stop_sequence, stop_id, departure_time, arrival_time) 
                     DO NOTHING
