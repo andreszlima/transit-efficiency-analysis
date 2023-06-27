@@ -2,7 +2,6 @@ import os
 import pandas as pd
 import pytz
 import requests
-from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
 import sys
@@ -31,15 +30,8 @@ def parse_pb_data(data):
         if entity.HasField('trip_update'):
             trip_id = entity.trip_update.trip.trip_id
             for update in entity.trip_update.stop_time_update:
-                if update.HasField('departure'):
-                    departure_time = pd.to_datetime(update.departure.time, unit='s', utc=True) if update.departure.time != 0 else pd.Timestamp('1970-01-01', tz='UTC')
-                else:
-                    departure_time = pd.Timestamp('1970-01-01', tz='UTC')
-                if update.HasField('arrival'):
-                    arrival_time = pd.to_datetime(update.arrival.time, unit='s', utc=True) if update.arrival.time != 0 else pd.Timestamp('1970-01-01', tz='UTC')
-                else:
-                    arrival_time = pd.Timestamp('1970-01-01', tz='UTC')
-
+                departure_time = pd.to_datetime(update.departure.time, unit='s', utc=True).tz_convert('America/Toronto') if update.HasField('departure') else pd.Timestamp('1970-01-01', tz='America/Toronto')
+                arrival_time = pd.to_datetime(update.arrival.time, unit='s', utc=True).tz_convert('America/Toronto') if update.HasField('arrival') else pd.Timestamp('1970-01-01', tz='America/Toronto')
                 parsed_data.append({
                     'trip_id': trip_id,
                     'stop_sequence': update.stop_sequence,
@@ -52,7 +44,6 @@ def parse_pb_data(data):
 
 def main():
     # Create engine
-    print(db_string)
     engine = create_engine(db_string)
     
     try:
@@ -75,7 +66,7 @@ def main():
         return
 
     # Save individual snapshot
-    timestamp = pd.Timestamp.utcnow().floor('s')
+    timestamp = pd.Timestamp.now(tz='America/Toronto')
     print(f'Inserting data with source {timestamp}...')
     df['file_source'] = timestamp
 
@@ -83,15 +74,13 @@ def main():
     try:
         with engine.connect() as conn:
             for _, row in df.iterrows():
-                # Check if arrival or departure time is older than the current time
-                if row['arrival_time'] < timestamp or row['departure_time'] < timestamp:
-                    insert_query = text(f"""
-                        INSERT INTO {table_name} (trip_id, stop_sequence, stop_id, departure_time, arrival_time, file_source)
-                        VALUES (:trip_id, :stop_sequence, :stop_id, :departure_time, :arrival_time, :file_source)
-                        ON CONFLICT (trip_id, stop_sequence, stop_id, departure_time, arrival_time) 
-                        DO NOTHING
-                    """)
-                    conn.execute(insert_query, row.to_dict())
+                insert_query = text(f"""
+                    INSERT INTO {table_name} (trip_id, stop_sequence, stop_id, departure_time, arrival_time, file_source)
+                    VALUES (:trip_id, :stop_sequence, :stop_id, :departure_time, :arrival_time, :file_source)
+                    ON CONFLICT (trip_id, stop_sequence, stop_id, departure_time, arrival_time) 
+                    DO NOTHING
+                """)
+                conn.execute(insert_query, row.to_dict())
             conn.commit()
         print('Data inserted.')
     except Exception as e:
