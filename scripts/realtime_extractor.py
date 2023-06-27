@@ -32,16 +32,13 @@ def parse_pb_data(data):
             trip_id = entity.trip_update.trip.trip_id
             for update in entity.trip_update.stop_time_update:
                 if update.HasField('departure'):
-                    departure_time = pd.to_datetime(update.departure.time, unit='s') if update.departure.time != 0 else pd.Timestamp('1970-01-01')
+                    departure_time = pd.to_datetime(update.departure.time, unit='s', utc=True) if update.departure.time != 0 else pd.Timestamp('1970-01-01', tz='UTC')
                 else:
-                    departure_time = pd.Timestamp('1970-01-01')
+                    departure_time = pd.Timestamp('1970-01-01', tz='UTC')
                 if update.HasField('arrival'):
-                    arrival_time = pd.to_datetime(update.arrival.time, unit='s') if update.arrival.time != 0 else pd.Timestamp('1970-01-01')
+                    arrival_time = pd.to_datetime(update.arrival.time, unit='s', utc=True) if update.arrival.time != 0 else pd.Timestamp('1970-01-01', tz='UTC')
                 else:
-                    arrival_time = pd.Timestamp('1970-01-01')
-
-                departure_time = departure_time.tz_localize('UTC') if departure_time.tzinfo is None else departure_time
-                arrival_time = arrival_time.tz_localize('UTC') if arrival_time.tzinfo is None else arrival_time
+                    arrival_time = pd.Timestamp('1970-01-01', tz='UTC')
 
                 parsed_data.append({
                     'trip_id': trip_id,
@@ -77,23 +74,16 @@ def main():
         return
 
     # Save individual snapshot
-    timestamp = pd.Timestamp.now(tz='UTC')
+    timestamp = pd.Timestamp.utcnow().floor('s')
     print(f'Inserting data with source {timestamp}...')
     df['file_source'] = timestamp
-
-    # Get current time
-    now = datetime.now(pytz.timezone('UTC'))
 
     # Insert data into the database
     try:
         with engine.connect() as conn:
             for _, row in df.iterrows():
                 # Check if arrival or departure time is older than the current time
-                arrival_time = row['arrival_time'].to_pydatetime() 
-                departure_time = row['departure_time'].to_pydatetime() 
-                zero_time = datetime(1970, 1, 1, tzinfo=pytz.UTC)
-                
-                if (arrival_time > zero_time and arrival_time < now) or (departure_time > zero_time and departure_time < now):
+                if row['arrival_time'] < timestamp or row['departure_time'] < timestamp:
                     insert_query = text(f"""
                         INSERT INTO {table_name} (trip_id, stop_sequence, stop_id, departure_time, arrival_time, file_source)
                         VALUES (:trip_id, :stop_sequence, :stop_id, :departure_time, :arrival_time, :file_source)
