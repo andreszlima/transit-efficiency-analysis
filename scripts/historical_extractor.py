@@ -29,7 +29,7 @@ def parse_date_and_time_vectorized(dates, times):
     dates += pd.to_timedelta((hours // 24).astype(int), unit='d')
     hours %= 24
     timestamps = pd.to_datetime(dates.astype(str) + ' ' + hours.astype(str) + ':' + pd.Series(minutes).astype(str) + ':' + pd.Series(seconds).astype(str))
-    return timestamps.dt.tz_localize('UTC').dt.tz_convert('America/Toronto')
+    return timestamps.dt.tz_localize('America/Toronto')
 
 def main():
     # Create engine and session

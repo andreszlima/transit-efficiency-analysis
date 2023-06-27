@@ -32,17 +32,15 @@ scp -i $PRIVATE_KEY_PATH $USERNAME@$SERVER_IP:$REMOTE_DUMP_FILE_PATH $LOCAL_DUMP
 echo "Dump file transferred to local machine." || \
 echo "Failed to transfer dump file."
 
-# Connect to local database and drop the existing table
-PGPASSWORD=$LOCAL_PASSWORD psql -U $LOCAL_USERNAME -d $LOCAL_DB_NAME -h localhost <<EOF
-DROP TABLE IF EXISTS $TABLE_NAME;
-EOF
+# Restore the table from the dump file and append to the existing table
+PGPASSWORD=$LOCAL_PASSWORD pg_restore -U $LOCAL_USERNAME -d $LOCAL_DB_NAME -v -F c -a $LOCAL_DUMP_FILE_PATH && \
+echo "Table $TABLE_NAME restored and appended from $LOCAL_DUMP_FILE_PATH." || \
+{ echo "Failed to restore and append table."; exit 1; }
 
-echo "Existing table dropped."
-
-# Restore the table from the dump file
-PGPASSWORD=$LOCAL_PASSWORD pg_restore -U $LOCAL_USERNAME -d $LOCAL_DB_NAME -v -F c $LOCAL_DUMP_FILE_PATH && \
-echo "Table $TABLE_NAME restored from $LOCAL_DUMP_FILE_PATH." || \
-echo "Failed to restore table."
+# Truncate the remote realtime table
+ssh -i $PRIVATE_KEY_PATH $USERNAME@$SERVER_IP "PGPASSWORD=$DB_PASSWORD psql -U $DB_USERNAME -d $DB_NAME -c 'TRUNCATE TABLE $TABLE_NAME;'" && \
+echo "Remote realtime table truncated." || \
+echo "Failed to truncate remote realtime table."
 
 # Remove local dump file
 rm $LOCAL_DUMP_FILE_PATH && \
