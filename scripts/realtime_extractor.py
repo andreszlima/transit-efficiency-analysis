@@ -22,8 +22,6 @@ db_string = os.getenv("REMOTE_DB_URL")
 # The table name can be replaced
 table_name = os.getenv("REALTIME_TABLE")
 
-zero_timestamp = pd.Timestamp('1970-01-01', tz='America/Toronto')
-
 def parse_pb_data(data):
     feed = gtfs_realtime_pb2.FeedMessage()
     feed.ParseFromString(data)
@@ -33,8 +31,18 @@ def parse_pb_data(data):
         if entity.HasField('trip_update'):
             trip_id = entity.trip_update.trip.trip_id
             for update in entity.trip_update.stop_time_update:
-                departure_time = pd.to_datetime(update.departure.time, unit='s', utc=True).tz_convert('America/Toronto') if update.HasField('departure') else zero_timestamp
-                arrival_time = pd.to_datetime(update.arrival.time, unit='s', utc=True).tz_convert('America/Toronto') if update.HasField('arrival') else zero_timestamp
+                if update.HasField('departure'):
+                    departure_time = pd.to_datetime(update.departure.time, unit='s') if update.departure.time != 0 else pd.Timestamp('1970-01-01')
+                else:
+                    departure_time = pd.Timestamp('1970-01-01')
+                if update.HasField('arrival'):
+                    arrival_time = pd.to_datetime(update.arrival.time, unit='s') if update.arrival.time != 0 else pd.Timestamp('1970-01-01')
+                else:
+                    arrival_time = pd.Timestamp('1970-01-01')
+
+                departure_time = departure_time.tz_localize('UTC') if departure_time.tzinfo is None else departure_time
+                arrival_time = arrival_time.tz_localize('UTC') if arrival_time.tzinfo is None else arrival_time
+
                 parsed_data.append({
                     'trip_id': trip_id,
                     'stop_sequence': update.stop_sequence,
@@ -69,22 +77,23 @@ def main():
         return
 
     # Save individual snapshot
-    timestamp = pd.Timestamp.now(tz='America/Toronto')
+    timestamp = pd.Timestamp.now(tz='UTC')
     print(f'Inserting data with source {timestamp}...')
     df['file_source'] = timestamp
 
     # Get current time
-    now = datetime.now(pytz.timezone('America/Toronto'))
+    now = datetime.now(pytz.timezone('UTC'))
 
     # Insert data into the database
     try:
         with engine.connect() as conn:
             for _, row in df.iterrows():
                 # Check if arrival or departure time is older than the current time
-                is_departure_valid = row['departure_time'].to_pydatetime() != zero_timestamp and row['departure_time'].to_pydatetime() < now
-                is_arrival_valid = row['arrival_time'].to_pydatetime() != zero_timestamp and row['arrival_time'].to_pydatetime() < now
-
-                if is_departure_valid or is_arrival_valid:
+                arrival_time = row['arrival_time'].to_pydatetime() 
+                departure_time = row['departure_time'].to_pydatetime() 
+                zero_time = datetime(1970, 1, 1, tzinfo=pytz.UTC)
+                
+                if (arrival_time > zero_time and arrival_time < now) or (departure_time > zero_time and departure_time < now):
                     insert_query = text(f"""
                         INSERT INTO {table_name} (trip_id, stop_sequence, stop_id, departure_time, arrival_time, file_source)
                         VALUES (:trip_id, :stop_sequence, :stop_id, :departure_time, :arrival_time, :file_source)
