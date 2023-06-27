@@ -52,6 +52,7 @@ def parse_pb_data(data):
 
 def main():
     # Create engine
+    print(db_string)
     engine = create_engine(db_string)
     
     try:
