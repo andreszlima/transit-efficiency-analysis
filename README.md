@@ -68,15 +68,15 @@ Historical data, which is stored in `gtfs_data` table, provides general informat
     ```sql
     CREATE TABLE IF NOT EXISTS public.gtfs_data
     (
-        trip_id character varying(255) COLLATE pg_catalog."default" NOT NULL,
+        trip_id text COLLATE pg_catalog."default" NOT NULL,
         start_date date NOT NULL,
-        stop_sequence integer NOT NULL,
-        stop_id character varying(255) COLLATE pg_catalog."default" NOT NULL,
-        route_id character varying(255) COLLATE pg_catalog."default" NOT NULL,
-        stop_name character varying(255) COLLATE pg_catalog."default" NOT NULL,
-        route_long_name character varying(255) COLLATE pg_catalog."default" NOT NULL,
-        arrival_time time without time zone,
-        departure_time time without time zone,
+        stop_sequence bigint NOT NULL,
+        stop_id bigint NOT NULL,
+        route_id text COLLATE pg_catalog."default" NOT NULL,
+        stop_name text COLLATE pg_catalog."default" NOT NULL,
+        route_long_name text COLLATE pg_catalog."default" NOT NULL,
+        arrival_time timestamp with time zone,
+        departure_time timestamp with time zone,
         CONSTRAINT gtfs_data_pkey PRIMARY KEY (trip_id, start_date, stop_sequence, stop_id, route_id, stop_name, route_long_name)
     )
     ```
