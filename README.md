@@ -98,6 +98,12 @@ Historical data, which is stored in `gtfs_data` table, provides general informat
 3. **Execution:**
     The `realtime_extractor.py` script is executed on a regular basis on a remote server. This script pulls data from the GTFS real-time feed and stores it in the `trip_updates` table. The `historical_extractor.py` script, on the other hand, should be run manually as needed to pull and store historical data in the `gtfs_data` table.
 
+    To run the scripts, you need to install the required Python libraries. You can do this by running the following command:
+    
+    ```bash
+    pip install pandas pytz requests python-dotenv protobuf sqlalchemy psycopg2-binary paramiko
+    ```
+
     You can set the `realtime_extractor.py` script to run as a cron job on your remote server. To make the script run every 3 minutes, edit the crontab file with `crontab -e` and add the following line:
 
     ```bash
