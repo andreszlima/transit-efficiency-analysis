@@ -31,6 +31,7 @@ def parse_date_and_time_vectorized(dates, times):
     timestamps = pd.to_datetime(dates.astype(str) + ' ' + hours.astype(str) + ':' + pd.Series(minutes).astype(str) + ':' + pd.Series(seconds).astype(str))
     return timestamps.dt.tz_localize('America/Toronto')
 
+#...
 def main():
     # Create engine and session
     engine = create_engine(db_string)
@@ -65,13 +66,17 @@ def main():
             df['arrival_time'] = parse_date_and_time_vectorized(df['date'].astype(str), df['arrival_time'])
             df['departure_time'] = parse_date_and_time_vectorized(df['date'].astype(str), df['departure_time'])
 
+            # Convert start_date to a date
+            df['date'] = pd.to_datetime(df['date'], format="%Y%m%d").dt.date
+            df.rename(columns={'date': 'start_date'}, inplace=True)
+
             # Select columns
-            df = df[['trip_id', 'stop_sequence', 'stop_id', 'route_id', 'stop_name', 'route_long_name', 'arrival_time', 'departure_time']]
+            df = df[['trip_id', 'start_date', 'stop_sequence', 'stop_id', 'route_id', 'stop_name', 'route_long_name', 'arrival_time', 'departure_time']]
             
             # Insert data into the database
             for row in df.itertuples(index=False):
-                insert_query = text(f"""INSERT INTO {table_name} (trip_id, stop_sequence, stop_id, route_id, stop_name, route_long_name, arrival_time, departure_time) 
-                                    VALUES (:trip_id, :stop_sequence, :stop_id, :route_id, :stop_name, :route_long_name, :arrival_time, :departure_time) 
+                insert_query = text(f"""INSERT INTO {table_name} (trip_id, start_date, stop_sequence, stop_id, route_id, stop_name, route_long_name, arrival_time, departure_time) 
+                                    VALUES (:trip_id, :start_date, :stop_sequence, :stop_id, :route_id, :stop_name, :route_long_name, :arrival_time, :departure_time) 
                                     ON CONFLICT DO NOTHING""")
                 session.execute(insert_query, dict(row._asdict()))
             

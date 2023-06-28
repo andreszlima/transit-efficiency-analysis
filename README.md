@@ -51,10 +51,8 @@ Historical data, which is stored in `gtfs_data` table, provides general informat
     VPS_USERNAME=<Your VPS Username>
     # VPS server IP
     VPS_SERVER_IP=<Your VPS Server IP>
-    # Path to the dump file in the VPS
-    VPS_REMOTE_DUMP_FILE_PATH=<Path to the dump file in the VPS>
-    # Path to the dump file in your local machine
-    LOCAL_DUMP_FILE_PATH=<Path to the dump file in your local machine>
+    # Path to the csv file in the local machine
+    LOCAL_CSV_FILE_PATH=<Path to your local csv file. it is erased after updating the table>
     # Path to your private key file
     PRIVATE_KEY_PATH=<Path to your private key file>
     ```
@@ -63,38 +61,38 @@ Historical data, which is stored in `gtfs_data` table, provides general informat
 
 
 2. **Database Setup:**
-    You need to create two tables in your PostgreSQL database: `trip_updates` for the realtime data and `gtfs_data` for the historical data.
+    You need to create two tables in your PostgreSQL database: `gtfs_data` for the historical data and `trip_updates` for the realtime data.
 
     The required SQL commands for creating these tables are as follows:
+
+    ```sql
+    CREATE TABLE IF NOT EXISTS public.gtfs_data
+    (
+        trip_id character varying(255) COLLATE pg_catalog."default" NOT NULL,
+        start_date date NOT NULL,
+        stop_sequence integer NOT NULL,
+        stop_id character varying(255) COLLATE pg_catalog."default" NOT NULL,
+        route_id character varying(255) COLLATE pg_catalog."default" NOT NULL,
+        stop_name character varying(255) COLLATE pg_catalog."default" NOT NULL,
+        route_long_name character varying(255) COLLATE pg_catalog."default" NOT NULL,
+        arrival_time time without time zone,
+        departure_time time without time zone,
+        CONSTRAINT gtfs_data_pkey PRIMARY KEY (trip_id, start_date, stop_sequence, stop_id, route_id, stop_name, route_long_name)
+    )
+    ```
 
     ```sql
     CREATE TABLE IF NOT EXISTS public.trip_updates
     (
         trip_id text COLLATE pg_catalog."default" NOT NULL,
+        start_date date NOT NULL,
         stop_sequence integer NOT NULL,
         stop_id text COLLATE pg_catalog."default" NOT NULL,
         departure_time timestamp with time zone NOT NULL DEFAULT '1970-01-01 02:00:00-03'::timestamp with time zone,
         arrival_time timestamp with time zone NOT NULL DEFAULT '1970-01-01 02:00:00-03'::timestamp with time zone,
         file_source timestamp with time zone NOT NULL,
-        CONSTRAINT trip_updates_pkey PRIMARY KEY (trip_id, stop_sequence, stop_id, departure_time, arrival_time),
-        CONSTRAINT trip_updates_uniq UNIQUE (trip_id, stop_sequence, stop_id, departure_time, arrival_time),
-        CONSTRAINT trip_updates_unique UNIQUE (trip_id, stop_sequence, stop_id, departure_time, arrival_time)
-    );
-    ```
-
-    ```sql
-    CREATE TABLE IF NOT EXISTS public.gtfs_data
-    (
-        trip_id text COLLATE pg_catalog."default",
-        stop_sequence bigint,
-        stop_id bigint,
-        route_id text COLLATE pg_catalog."default",
-        stop_name text COLLATE pg_catalog."default",
-        route_long_name text COLLATE pg_catalog."default",
-        arrival_time timestamp with time zone,
-        departure_time timestamp with time zone,
-        CONSTRAINT gtfs_data_pkey PRIMARY KEY (trip_id, stop_sequence, stop_id, route_id, stop_name, route_long_name)
-    );
+        CONSTRAINT trip_updates_pkey PRIMARY KEY (trip_id, start_date, stop_sequence, stop_id, departure_time, arrival_time)
+    )
     ```
 
 3. **Execution:**

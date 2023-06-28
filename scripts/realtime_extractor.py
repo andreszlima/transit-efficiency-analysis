@@ -29,11 +29,13 @@ def parse_pb_data(data):
     for entity in feed.entity:
         if entity.HasField('trip_update'):
             trip_id = entity.trip_update.trip.trip_id
+            start_date = entity.trip_update.trip.start_date  # Add start_date
             for update in entity.trip_update.stop_time_update:
                 departure_time = pd.to_datetime(update.departure.time, unit='s', utc=True).tz_convert('America/Toronto') if update.HasField('departure') else pd.Timestamp('1970-01-01', tz='America/Toronto')
                 arrival_time = pd.to_datetime(update.arrival.time, unit='s', utc=True).tz_convert('America/Toronto') if update.HasField('arrival') else pd.Timestamp('1970-01-01', tz='America/Toronto')
                 parsed_data.append({
                     'trip_id': trip_id,
+                    'start_date': start_date,
                     'stop_sequence': update.stop_sequence,
                     'stop_id': update.stop_id,
                     'departure_time': departure_time,
@@ -41,6 +43,7 @@ def parse_pb_data(data):
                 })
 
     return pd.DataFrame(parsed_data)
+
 
 def main():
     # Create engine
@@ -75,9 +78,9 @@ def main():
         with engine.connect() as conn:
             for _, row in df.iterrows():
                 insert_query = text(f"""
-                    INSERT INTO {table_name} (trip_id, stop_sequence, stop_id, departure_time, arrival_time, file_source)
-                    VALUES (:trip_id, :stop_sequence, :stop_id, :departure_time, :arrival_time, :file_source)
-                    ON CONFLICT (trip_id, stop_sequence, stop_id, departure_time, arrival_time) 
+                    INSERT INTO {table_name} (trip_id, start_date, stop_sequence, stop_id, departure_time, arrival_time, file_source)
+                    VALUES (:trip_id, :start_date, :stop_sequence, :stop_id, :departure_time, :arrival_time, :file_source)
+                    ON CONFLICT (trip_id, start_date, stop_sequence, stop_id, departure_time, arrival_time) 
                     DO NOTHING
                 """)
                 conn.execute(insert_query, row.to_dict())
@@ -89,3 +92,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
