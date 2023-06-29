@@ -114,9 +114,18 @@ Historical data, which is stored in `gtfs_data` table, provides general informat
 
     If you want to get the most recent realtime data, you can use the included shell script. To do this, make sure the script is executable by running `chmod +x get_realtime.sh`.
 
+4. **Data Transfer:**
+    Since the analysis that will be made here are costly in terms of computer power, I decided to do it locally instead of on the remote computer, which is somewhat limited. To do this a Python script, `get_realtime.py` is employed. This script uses the Paramiko library for SSH connections and commands, psycopg2 for PostgreSQL database interaction, and dotenv for environment variable management. The script is executed on a local machine and connects to a remote server to download the most recent data from the `trip_updates` table. The data is then stored in a local CSV file, which is then used to update the `trip_updates` table in the local database.
 
-## Findings
-This section will be updated as we progress with the analysis and gather findings.
+## Data analysis
+
+1. **Data analysis - Bus Timeliness:**
+
+    The `diff_times.py` script is used to analyze the timeliness of buses. It populates the table with the new data using a SQL query. This query joins the `trip_updates` table (containing real-time data) and the `gtfs_data` table (containing historical data), calculates the differences in arrival and departure times, and stores this data in the `trip_updates_with_diffs` table.
+
+    Since past data with exact times that buses got to their stops is not freely available, I decided to query the realtime data every minute to get the updated ETA of the buses to get the most up to date time to arrival. This data is then compared to the scheduled time to arrival to get the difference in time. This data is then stored in the `trip_updates_with_diffs` table.
+
+    The `timeliness.py` script then uses the data in the `trip_updates_with_diffs` table to calculate the average timeliness of buses for each route. The results are then stored in the `timeliness` table.
 
 ## Visualizations
 Visualizations to complement the findings will be added in future updates.
