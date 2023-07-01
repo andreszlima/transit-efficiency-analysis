@@ -39,9 +39,11 @@ def main():
 
     # Download CSV file from remote server to local machine
     print('Transferring CSV file...')
-    sftp = ssh.open_sftp()
-    sftp.get(REMOTE_CSV_FILE_PATH, LOCAL_CSV_FILE_PATH)
-    sftp.close()
+    scp_command = f"scp -i {PRIVATE_KEY_PATH} {USERNAME}@{SERVER_IP}:{REMOTE_CSV_FILE_PATH} {LOCAL_CSV_FILE_PATH}"
+    scp_result = subprocess.call(scp_command, shell=True)
+    if scp_result != 0:
+        print(f"Error transferring file. SCP returned code {scp_result}.")
+        return
     print('CSV file transferred.')
 
     # Import CSV file to local PostgreSQL table
