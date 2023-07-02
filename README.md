@@ -17,7 +17,7 @@ Historical data, which is stored in `gtfs_data` table, provides general informat
 ## Tools and Technologies
 * Python for data gathering, data cleaning, and analysis. Key libraries used include Pandas for data manipulation, requests for data downloading, and SQLAlchemy for database connection.
 * PostgreSQL for data storage and management. Database queries are written in SQL for extracting insights from the data.
-* Future work may include using Apache Airflow to automate and schedule data pipelines, and creating dashboards for data visualization.
+* Google Data Studio for data visualization and analysis. Data is stored in a PostgreSQL database and Google Data Studio could be used to connect to the database, but since my database is hosted locally, I export the data as .csv file and upload it to Google Data Studio.
 
 ## Setup & Execution
 
