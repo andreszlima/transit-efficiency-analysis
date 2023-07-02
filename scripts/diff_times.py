@@ -38,18 +38,24 @@ def populate_table():
         EXTRACT(EPOCH FROM (adjusted_trip_updates.actual_arrival_time - gtfs_data.arrival_time)) AS arrival_time_diff_in_seconds,
         EXTRACT(EPOCH FROM (adjusted_trip_updates.actual_departure_time - gtfs_data.departure_time)) AS departure_time_diff_in_seconds,
         CASE
-            WHEN EXTRACT(DOW FROM adjusted_trip_updates.actual_arrival_time) IN (0, 6) THEN 'Weekend'
-            ELSE 'Weekday'
+            WHEN EXTRACT(DOW FROM adjusted_trip_updates.actual_arrival_time) = 0 THEN 'Sunday'
+            WHEN EXTRACT(DOW FROM adjusted_trip_updates.actual_arrival_time) = 1 THEN 'Monday'
+            WHEN EXTRACT(DOW FROM adjusted_trip_updates.actual_arrival_time) = 2 THEN 'Tuesday'
+            WHEN EXTRACT(DOW FROM adjusted_trip_updates.actual_arrival_time) = 3 THEN 'Wednesday'
+            WHEN EXTRACT(DOW FROM adjusted_trip_updates.actual_arrival_time) = 4 THEN 'Thursday'
+            WHEN EXTRACT(DOW FROM adjusted_trip_updates.actual_arrival_time) = 5 THEN 'Friday'
+            WHEN EXTRACT(DOW FROM adjusted_trip_updates.actual_arrival_time) = 6 THEN 'Saturday'
         END AS day_type,
         CASE
-            WHEN DATE_PART('hour', adjusted_trip_updates.actual_arrival_time AT TIME ZONE 'America/Toronto') >= 6 AND DATE_PART('hour', adjusted_trip_updates.actual_arrival_time AT TIME ZONE 'America/Toronto') < 9 THEN 'Morning rush hour'
-            WHEN DATE_PART('hour', adjusted_trip_updates.actual_arrival_time AT TIME ZONE 'America/Toronto') >= 9 AND DATE_PART('hour', adjusted_trip_updates.actual_arrival_time AT TIME ZONE 'America/Toronto') < 11 THEN 'Mid morning'
-            WHEN DATE_PART('hour', adjusted_trip_updates.actual_arrival_time AT TIME ZONE 'America/Toronto') >= 11 AND DATE_PART('hour', adjusted_trip_updates.actual_arrival_time AT TIME ZONE 'America/Toronto') < 13 THEN 'Midday'
-            WHEN DATE_PART('hour', adjusted_trip_updates.actual_arrival_time AT TIME ZONE 'America/Toronto') >= 13 AND DATE_PART('hour', adjusted_trip_updates.actual_arrival_time AT TIME ZONE 'America/Toronto') < 16 THEN 'Afternoon'
-            WHEN DATE_PART('hour', adjusted_trip_updates.actual_arrival_time AT TIME ZONE 'America/Toronto') >= 16 AND DATE_PART('hour', adjusted_trip_updates.actual_arrival_time AT TIME ZONE 'America/Toronto') < 18 THEN 'Late afternoon'
-            WHEN DATE_PART('hour', adjusted_trip_updates.actual_arrival_time AT TIME ZONE 'America/Toronto') >= 18 AND DATE_PART('hour', adjusted_trip_updates.actual_arrival_time AT TIME ZONE 'America/Toronto') < 20 THEN 'Evening'
-            ELSE 'Night'
-        END AS time_of_day
+            WHEN DATE_PART('hour', adjusted_trip_updates.actual_arrival_time AT TIME ZONE 'America/Toronto') >= 6 AND DATE_PART('hour', adjusted_trip_updates.actual_arrival_time AT TIME ZONE 'America/Toronto') < 9 THEN 'Morning rush hour (6AM to 9AM)'
+            WHEN DATE_PART('hour', adjusted_trip_updates.actual_arrival_time AT TIME ZONE 'America/Toronto') >= 9 AND DATE_PART('hour', adjusted_trip_updates.actual_arrival_time AT TIME ZONE 'America/Toronto') < 11 THEN 'Mid morning (9AM to 11AM)'
+            WHEN DATE_PART('hour', adjusted_trip_updates.actual_arrival_time AT TIME ZONE 'America/Toronto') >= 11 AND DATE_PART('hour', adjusted_trip_updates.actual_arrival_time AT TIME ZONE 'America/Toronto') < 13 THEN 'Midday (11AM to 01PM)'
+            WHEN DATE_PART('hour', adjusted_trip_updates.actual_arrival_time AT TIME ZONE 'America/Toronto') >= 13 AND DATE_PART('hour', adjusted_trip_updates.actual_arrival_time AT TIME ZONE 'America/Toronto') < 16 THEN 'Afternoon (01PM to 04PM)'
+            WHEN DATE_PART('hour', adjusted_trip_updates.actual_arrival_time AT TIME ZONE 'America/Toronto') >= 16 AND DATE_PART('hour', adjusted_trip_updates.actual_arrival_time AT TIME ZONE 'America/Toronto') < 19 THEN 'Afternoon rush hour (04PM to 07PM)'
+            WHEN DATE_PART('hour', adjusted_trip_updates.actual_arrival_time AT TIME ZONE 'America/Toronto') >= 19 AND DATE_PART('hour', adjusted_trip_updates.actual_arrival_time AT TIME ZONE 'America/Toronto') < 22 THEN 'Evening (07PM to 10PM)'
+            ELSE 'Night (10PM to 6AM)'
+        END AS time_of_day,
+        gtfs_data.geo_coordinates
     FROM 
     (
         SELECT 

@@ -61,7 +61,7 @@ Historical data, which is stored in `gtfs_data` table, provides general informat
 
 
 2. **Database Setup:**
-    You need to create two tables in your PostgreSQL database: `gtfs_data` for the historical data and `trip_updates` for the realtime data.
+    You need to create three tables in your PostgreSQL database: `gtfs_data` for the historical data, `trip_updates` for the realtime data and `trip_updates_with_diffs` for the data with the difference between the scheduled and actual arrival times.
 
     The required SQL commands for creating these tables are as follows:
 
@@ -77,6 +77,7 @@ Historical data, which is stored in `gtfs_data` table, provides general informat
         route_long_name text COLLATE pg_catalog."default" NOT NULL,
         arrival_time timestamp with time zone,
         departure_time timestamp with time zone,
+        geo_coordinates text COLLATE pg_catalog."default" NOT NULL,
         CONSTRAINT gtfs_data_pkey PRIMARY KEY (trip_id, start_date, stop_sequence, stop_id, route_id, stop_name, route_long_name)
     )
     ```
@@ -95,6 +96,29 @@ Historical data, which is stored in `gtfs_data` table, provides general informat
     )
     ```
 
+    ```sql
+    CREATE TABLE IF NOT EXISTS public.trip_updates_with_diffs
+    (
+        trip_id text COLLATE pg_catalog."default",
+        start_date date,
+        stop_sequence integer,
+        stop_id bigint,
+        actual_arrival_time timestamp with time zone,
+        actual_departure_time timestamp with time zone,
+        file_source timestamp with time zone,
+        route_id text COLLATE pg_catalog."default",
+        stop_name text COLLATE pg_catalog."default",
+        route_long_name text COLLATE pg_catalog."default",
+        scheduled_arrival_time timestamp with time zone,
+        scheduled_departure_time timestamp with time zone,
+        arrival_time_diff_in_seconds double precision,
+        departure_time_diff_in_seconds double precision,
+        day_type text COLLATE pg_catalog."default",
+        time_of_day text COLLATE pg_catalog."default",
+        geo_coordinates text COLLATE pg_catalog."default" NOT NULL
+    )
+    ```
+
 3. **Execution:**
     The `realtime_extractor.py` script is executed on a regular basis on a remote server. This script pulls data from the GTFS real-time feed and stores it in the `trip_updates` table. The `historical_extractor.py` script, on the other hand, should be run manually as needed to pull and store historical data in the `gtfs_data` table.
 
@@ -104,10 +128,10 @@ Historical data, which is stored in `gtfs_data` table, provides general informat
     pip install pandas pytz requests python-dotenv protobuf sqlalchemy psycopg2-binary paramiko
     ```
 
-    You can set the `realtime_extractor.py` script to run as a cron job on your remote server. To make the script run every 3 minutes, edit the crontab file with `crontab -e` and add the following line:
+    You can set the `realtime_extractor.py` script to run as a cron job on your remote server. To make the script run every minute, edit the crontab file with `crontab -e` and add the following line:
 
     ```bash
-    */3 * * * * /usr/bin/python3 /path/to/realtime_extractor.py
+    * * * * * /usr/bin/python3 /path/to/realtime_extractor.py
     ```
     
     Be sure to replace `/path/to/realtime_extractor.py` with the actual path to the Python script on your server.
@@ -119,16 +143,31 @@ Historical data, which is stored in `gtfs_data` table, provides general informat
 
 ## Data analysis
 
-1. **Data analysis - Bus Timeliness:**
+The `diff_times.py` script is used to analyze the timeliness of buses. It populates the table with the new data using a SQL query. This query joins the `trip_updates` table (containing real-time data) and the `gtfs_data` table (containing historical data), calculates the differences in arrival and departure times, and stores this data in the `trip_updates_with_diffs` table.
 
-    The `diff_times.py` script is used to analyze the timeliness of buses. It populates the table with the new data using a SQL query. This query joins the `trip_updates` table (containing real-time data) and the `gtfs_data` table (containing historical data), calculates the differences in arrival and departure times, and stores this data in the `trip_updates_with_diffs` table.
+Since past data with exact times that buses got to their stops is not freely available, I decided to query the realtime data every minute to get the updated ETA of the buses to get the most up to date time to arrival. This data is then compared to the scheduled time to arrival to get the difference in time.
 
-    Since past data with exact times that buses got to their stops is not freely available, I decided to query the realtime data every minute to get the updated ETA of the buses to get the most up to date time to arrival. This data is then compared to the scheduled time to arrival to get the difference in time. This data is then stored in the `trip_updates_with_diffs` table.
+### Dashboard access
 
-    The `timeliness.py` script then uses the data in the `trip_updates_with_diffs` table to calculate the average timeliness of buses for each route. The results are then stored in the `timeliness` table.
+To access the dashboard you can follow this link: [Sudbury's Transit Efficiency Analysis](https://lookerstudio.google.com/reporting/27a19cc1-0a40-453a-ae12-5bb09e7de7e9)
 
-## Visualizations
-Visualizations to complement the findings will be added in future updates.
+![Dashboard](public/Dashboard%20-%20STEA.png?raw=true "Sudbury Transit Efficiency Analysis")
+
+1. **Bus Timeliness**
+
+    This analysis has shown which times of the day are the most and least efficient in terms of bus timeliness. It was possible to filter by routes, stops, time of day, and day of the week. The results are shown in the form of a bar chart.
+
+2. **Route Efficiency**
+
+    Using a map it is possible to see which areas have more routes and which have less. This can be seen with a heatmap with the stops plotted on top. The routes are also plotted on the map and can be filtered by day of the week and time of day.
+
+3. **Peak Hour Analysis**
+
+    Through both bar chart and heatmap, it is possible to see which times of the day are the most and least efficient in terms of bus timeliness.
+
+## Future Work
+
+- [ ] Add weather data to the database to see how it affects bus timeliness.
 
 ## License
 This project is licensed under the terms of the [MIT License](LICENSE.md).
