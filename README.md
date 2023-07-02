@@ -111,8 +111,8 @@ Historical data, which is stored in `gtfs_data` table, provides general informat
         start_date date NOT NULL,
         stop_sequence integer NOT NULL,
         stop_id text COLLATE pg_catalog."default" NOT NULL,
-        departure_time timestamp with time zone NOT NULL DEFAULT '1970-01-01 02:00:00-03'::timestamp with time zone,
-        arrival_time timestamp with time zone NOT NULL DEFAULT '1970-01-01 02:00:00-03'::timestamp with time zone,
+        departure_time timestamp with time zone NOT NULL DEFAULT '1970-01-01 00:00:00-00'::timestamp with time zone,
+        arrival_time timestamp with time zone NOT NULL DEFAULT '1970-01-01 00:00:00-00'::timestamp with time zone,
         file_source timestamp with time zone NOT NULL,
         CONSTRAINT trip_updates_pkey PRIMARY KEY (trip_id, start_date, stop_sequence, stop_id, departure_time, arrival_time)
     )
