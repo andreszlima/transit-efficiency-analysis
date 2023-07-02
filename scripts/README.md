@@ -41,26 +41,7 @@ You also need to have PostgreSQL installed and a database set up to store the pr
 
 ## Usage
 
-To use these scripts, you need to set the URLs for the historical and real-time GTFS data feeds as well as the local and remote PostgreSQL database credentials in a `.env` file in the project root directory.
-
-Here's an example of what the `.env` file might look like:
-
-```shell
-HISTORICAL_GTFS_URL=https://example.com/historical-gtfs.zip
-REALTIME_GTFS_URL=https://example.com/realtime-gtfs.pb
-
-LOCAL_DB_HOST=localhost
-LOCAL_DB_PORT=5432
-LOCAL_DB_NAME=gtfs
-LOCAL_DB_USER=postgres
-LOCAL_DB_PASSWORD=yourpassword
-
-REMOTE_DB_HOST=remotedb.example.com
-REMOTE_DB_PORT=5432
-REMOTE_DB_NAME=gtfs
-REMOTE_DB_USER=postgres
-REMOTE_DB_PASSWORD=yourpassword
-```
+To use these scripts, you need to set the URLs for the historical and real-time GTFS data feeds as well as the local and remote PostgreSQL database credentials in a `.env` file in the `scripts` directory, as stated in the [README](../README.md) for this project.
 
 You can then run each script from the command line as follows:
 
