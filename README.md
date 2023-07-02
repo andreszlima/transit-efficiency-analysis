@@ -1,4 +1,4 @@
-# Sudbury Transit Efficiency Analysis
+# Sudbury's Transit Efficiency Analysis
 
 ![People leaving bus](public/canada%20bus.png?raw=true "Sudbury Transit Efficiency Analysis")
 
