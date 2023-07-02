@@ -21,7 +21,29 @@ Historical data, which is stored in `gtfs_data` table, provides general informat
 
 ## Setup & Execution
 
-1. **Environment Setup:**
+1. **Dependencies**
+    This project requires the following Python libraries:
+
+    - **pandas**: A powerful data structures and data analysis library.
+    - **pytz**: A library for handling timezone calculations.
+    - **requests**: A library for making HTTP requests.
+    - **python-dotenv**: A library for loading environment variables from .env files.
+    - **protobuf**: Google's data interchange format, needed to handle GTFS realtime data.
+    - **sqlalchemy**: A SQL toolkit and Object-Relational Mapping (ORM) system for Python, providing a full suite of well known enterprise-level persistence patterns.
+    - **psycopg2**: A PostgreSQL database adapter for Python.
+    - **paramiko**: A Python (2.7, 3.4+) implementation of the SSHv2 protocol, providing both client and server functionality.
+
+    You can install all these packages using pip:
+
+    ```shell
+    pip install pandas pytz requests python-dotenv protobuf sqlalchemy psycopg2 paramiko
+    ```
+
+    Ensure that the Python packages are installed in the same environment where you intend to run your Python scripts.
+
+    Additionally, the `lib` module (a local module in this project) is used. This module is a folder containing generated protocol buffer code to handle GTFS data. Please ensure this is properly set up in your environment. It is located in the `lib` folder, inside the root folder of this repository.
+
+2. **Environment Setup:**
     The project uses environment variables for configuration. These can be set manually, but for ease of use, it's recommended to store them in an `.env` file. The python scripts will search for this file inside `scripts` folder. This file should not be committed to version control.
 
     Here's a sample `.env` file with all required variables:
@@ -60,7 +82,7 @@ Historical data, which is stored in `gtfs_data` table, provides general informat
     Be sure to replace all `<Your ...>` placeholders with your actual data.
 
 
-2. **Database Setup:**
+3. **Database Setup:**
     You need to create three tables in your PostgreSQL database: `gtfs_data` for the historical data, `trip_updates` for the realtime data and `trip_updates_with_diffs` for the data with the difference between the scheduled and actual arrival times.
 
     The required SQL commands for creating these tables are as follows:
@@ -119,14 +141,8 @@ Historical data, which is stored in `gtfs_data` table, provides general informat
     )
     ```
 
-3. **Execution:**
+4. **Execution:**
     The `realtime_extractor.py` script is executed on a regular basis on a remote server. This script pulls data from the GTFS real-time feed and stores it in the `trip_updates` table. The `historical_extractor.py` script, on the other hand, should be run manually as needed to pull and store historical data in the `gtfs_data` table.
-
-    To run the scripts, you need to install the required Python libraries. You can do this by running the following command:
-    
-    ```bash
-    pip install pandas pytz requests python-dotenv protobuf sqlalchemy psycopg2-binary paramiko
-    ```
 
     You can set the `realtime_extractor.py` script to run as a cron job on your remote server. To make the script run every minute, edit the crontab file with `crontab -e` and add the following line:
 
@@ -138,7 +154,7 @@ Historical data, which is stored in `gtfs_data` table, provides general informat
 
     If you want to get the most recent realtime data, you can use the included shell script. To do this, make sure the script is executable by running `chmod +x get_realtime.sh`.
 
-4. **Data Transfer:**
+5. **Data Transfer:**
     Since the analysis that will be made here are costly in terms of computer power, I decided to do it locally instead of on the remote computer, which is somewhat limited. To do this a Python script, `get_realtime.py` is employed. This script uses the Paramiko library for SSH connections and commands, psycopg2 for PostgreSQL database interaction, and dotenv for environment variable management. The script is executed on a local machine and connects to a remote server to download the most recent data from the `trip_updates` table. The data is then stored in a local CSV file, which is then used to update the `trip_updates` table in the local database.
 
 ## Data analysis
