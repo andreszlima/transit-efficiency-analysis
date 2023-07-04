@@ -3,6 +3,7 @@ import requests
 import pandas as pd
 import zipfile
 import io
+import pytz
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text, Table, MetaData
 from sqlalchemy.orm import sessionmaker
@@ -23,15 +24,18 @@ table_name = os.getenv("HISTORICAL_TABLE")
 chunk_size = 5000  # Adjust as necessary depending on your server's resources
 
 def parse_date_and_time_vectorized(dates, times):
+    sudbury_tz = pytz.timezone('America/Toronto')  # Sudbury is in the Toronto time zone
     hours, minutes, seconds = zip(*[map(int, time.split(':')) for time in times])
     hours = pd.Series(hours)
     dates = pd.to_datetime(dates, format="%Y%m%d")
     dates += pd.to_timedelta((hours // 24).astype(int), unit='d')
     hours %= 24
     timestamps = pd.to_datetime(dates.astype(str) + ' ' + hours.astype(str) + ':' + pd.Series(minutes).astype(str) + ':' + pd.Series(seconds).astype(str))
-    return timestamps.dt.tz_localize('America/Toronto')
+    # Convert to Sudbury's time zone first
+    timestamps = timestamps.dt.tz_localize(sudbury_tz)
+    # Then convert to UTC
+    return timestamps.dt.tz_convert('UTC')
 
-#...
 def main():
     # Create engine and session
     engine = create_engine(db_string)

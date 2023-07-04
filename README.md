@@ -184,6 +184,8 @@ To access the dashboard you can follow this link: [Sudbury's Transit Efficiency 
 ## Future Work
 
 - [ ] Add weather data to the database to see how it affects bus timeliness.
+- [ ] Add holidays to the database to see how it affects bus timeliness.
+- [ ] Create a machine learning model to predict bus timeliness.
 
 ## License
 This project is licensed under the terms of the [MIT License](LICENSE.md).
