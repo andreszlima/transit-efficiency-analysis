@@ -1,12 +1,13 @@
 import os
 import pandas as pd
-import pytz
 import requests
 import json
+import pytz
 from pathlib import Path
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 import sys
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from lib import gtfs_realtime_pb2
 from sqlalchemy import create_engine, text
@@ -80,7 +81,6 @@ def get_weather_data():
         print(f"Error occurred while getting weather data: {e}")
         return None
 
-
 def parse_pb_data(data):
     feed = gtfs_realtime_pb2.FeedMessage()
     feed.ParseFromString(data)
@@ -91,7 +91,6 @@ def parse_pb_data(data):
             trip_id = entity.trip_update.trip.trip_id
             start_date = entity.trip_update.trip.start_date
             for update in entity.trip_update.stop_time_update:
-                # The timestamp is already in UTC, no need to convert
                 departure_time = pd.to_datetime(update.departure.time, unit='s', utc=True) if update.HasField('departure') else pd.Timestamp('1970-01-01', tz='UTC')
                 arrival_time = pd.to_datetime(update.arrival.time, unit='s', utc=True) if update.HasField('arrival') else pd.Timestamp('1970-01-01', tz='UTC')
                 parsed_data.append({
@@ -131,6 +130,9 @@ def main():
     # Get weather data
     weather_data = get_weather_data()
 
+    # Get current datetime in UTC
+    now = datetime.utcnow().replace(tzinfo=pytz.UTC)
+
     # Insert data into the database
     try:
         with engine.connect() as conn:
@@ -139,23 +141,25 @@ def main():
                     row['weather_group'] = weather_data['weather_group']
                     row['weather_description'] = weather_data['weather_description']
                     insert_query = text(f"""
-                        INSERT INTO {table_name} (trip_id, start_date, stop_sequence, stop_id, arrival_time, departure_time, weather_group, weather_description)
-                        VALUES (:trip_id, :start_date, :stop_sequence, :stop_id, :arrival_time, :departure_time, :weather_group, :weather_description)
+                        INSERT INTO {table_name} (trip_id, start_date, stop_sequence, stop_id, arrival_time, departure_time, weather_group, weather_description, created_at)
+                        VALUES (:trip_id, :start_date, :stop_sequence, :stop_id, :arrival_time, :departure_time, :weather_group, :weather_description, :created_at)
                         ON CONFLICT (trip_id, start_date, stop_sequence, stop_id) 
                         DO UPDATE SET 
                           arrival_time = EXCLUDED.arrival_time,
                           departure_time = EXCLUDED.departure_time,
                           weather_group = EXCLUDED.weather_group, 
-                          weather_description = EXCLUDED.weather_description""")
+                          weather_description = EXCLUDED.weather_description,
+                          updated_at = :updated_at""")
                 else:
                     insert_query = text(f"""
-                        INSERT INTO {table_name} (trip_id, start_date, stop_sequence, stop_id, arrival_time, departure_time)
-                        VALUES (:trip_id, :start_date, :stop_sequence, :stop_id, :arrival_time, :departure_time)
+                        INSERT INTO {table_name} (trip_id, start_date, stop_sequence, stop_id, arrival_time, departure_time, created_at)
+                        VALUES (:trip_id, :start_date, :stop_sequence, :stop_id, :arrival_time, :departure_time, :created_at)
                         ON CONFLICT (trip_id, start_date, stop_sequence, stop_id) 
                         DO UPDATE SET 
                           arrival_time = EXCLUDED.arrival_time,
-                          departure_time = EXCLUDED.departure_time""")
-                conn.execute(insert_query, row.to_dict())
+                          departure_time = EXCLUDED.departure_time,
+                          updated_at = :updated_at""")
+                conn.execute(insert_query, {**row.to_dict(), 'created_at': now, 'updated_at': now})
             conn.commit()
         print('Data inserted.')
     except Exception as e:

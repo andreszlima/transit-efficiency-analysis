@@ -54,7 +54,9 @@ def populate_table():
             WHEN EXTRACT(DOW FROM gd.arrival_time AT TIME ZONE 'UTC' AT TIME ZONE 'America/Toronto') = 6 THEN 'Saturday'
         END AS day_type,
         DATE_PART('hour', gd.arrival_time AT TIME ZONE 'UTC' AT TIME ZONE 'America/Toronto') AS hour_of_day,
-        gd.geo_coordinates
+        gd.geo_coordinates,
+        tu.created_at,
+        tu.updated_at
     FROM 
         """ + os.getenv("REALTIME_TABLE") + """ AS tu
     JOIN """ + os.getenv("HISTORICAL_TABLE") + """ AS gd
