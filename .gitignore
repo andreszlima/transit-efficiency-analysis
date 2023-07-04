@@ -1,3 +1,4 @@
 scripts/.env
 public/.DS_Store
 .DS_Store
+last_api_call.json
