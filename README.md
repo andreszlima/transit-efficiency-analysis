@@ -100,7 +100,7 @@ Historical data, which is stored in `gtfs_data` table, provides general informat
         arrival_time timestamp with time zone,
         departure_time timestamp with time zone,
         geo_coordinates text COLLATE pg_catalog."default" NOT NULL,
-        CONSTRAINT gtfs_data_pkey PRIMARY KEY (trip_id, start_date, stop_sequence, stop_id, route_id, stop_name, route_long_name)
+        CONSTRAINT gtfs_data_pkey PRIMARY KEY (trip_id, start_date, stop_sequence, stop_id)
     )
     ```
 
@@ -111,33 +111,41 @@ Historical data, which is stored in `gtfs_data` table, provides general informat
         start_date date NOT NULL,
         stop_sequence integer NOT NULL,
         stop_id text COLLATE pg_catalog."default" NOT NULL,
-        departure_time timestamp with time zone NOT NULL DEFAULT '1970-01-01 00:00:00-00'::timestamp with time zone,
-        arrival_time timestamp with time zone NOT NULL DEFAULT '1970-01-01 00:00:00-00'::timestamp with time zone,
-        file_source timestamp with time zone NOT NULL,
-        CONSTRAINT trip_updates_pkey PRIMARY KEY (trip_id, start_date, stop_sequence, stop_id, departure_time, arrival_time)
+        arrival_time timestamp with time zone NOT NULL DEFAULT '1969-12-31 21:00:00-03'::timestamp with time zone,
+        departure_time timestamp with time zone NOT NULL DEFAULT '1969-12-31 21:00:00-03'::timestamp with time zone,
+        weather_group text COLLATE pg_catalog."default",
+        weather_description text COLLATE pg_catalog."default",
+        created_at timestamp with time zone,
+        updated_at timestamp with time zone,
+        CONSTRAINT trip_updates_pkey PRIMARY KEY (trip_id, start_date, stop_sequence, stop_id)
     )
     ```
 
     ```sql
     CREATE TABLE IF NOT EXISTS public.trip_updates_with_diffs
     (
-        trip_id text COLLATE pg_catalog."default",
-        start_date date,
-        stop_sequence integer,
-        stop_id bigint,
-        actual_arrival_time timestamp with time zone,
-        actual_departure_time timestamp with time zone,
-        file_source timestamp with time zone,
+        trip_id text COLLATE pg_catalog."default" NOT NULL,
+        start_date date NOT NULL,
+        stop_sequence integer NOT NULL,
+        stop_id bigint NOT NULL,
         route_id text COLLATE pg_catalog."default",
         stop_name text COLLATE pg_catalog."default",
         route_long_name text COLLATE pg_catalog."default",
+        actual_arrival_time timestamp with time zone,
         scheduled_arrival_time timestamp with time zone,
+        arrival_time_diff_in_minutes double precision,
+        actual_departure_time timestamp with time zone,
         scheduled_departure_time timestamp with time zone,
-        arrival_time_diff_in_seconds double precision,
-        departure_time_diff_in_seconds double precision,
+        departure_time_diff_in_minutes double precision,
+        average_diff_in_minutes double precision,
+        weather_group text COLLATE pg_catalog."default",
+        weather_description text COLLATE pg_catalog."default",
         day_type text COLLATE pg_catalog."default",
-        time_of_day text COLLATE pg_catalog."default",
-        geo_coordinates text COLLATE pg_catalog."default" NOT NULL
+        sudbury_hour_of_day integer,
+        geo_coordinates text COLLATE pg_catalog."default" NOT NULL,
+        created_at timestamp with time zone,
+        updated_at timestamp with time zone,
+        CONSTRAINT trip_updates_with_diffs_pkey PRIMARY KEY (trip_id, start_date, stop_sequence, stop_id)
     )
     ```
 
@@ -151,8 +159,6 @@ Historical data, which is stored in `gtfs_data` table, provides general informat
     ```
     
     Be sure to replace `/path/to/realtime_extractor.py` with the actual path to the Python script on your server.
-
-    If you want to get the most recent realtime data, you can use the included shell script. To do this, make sure the script is executable by running `chmod +x get_realtime.sh`.
 
 5. **Data Transfer:**
     Since the analysis that will be made here are costly in terms of computer power, I decided to do it locally instead of on the remote computer, which is somewhat limited. To do this a Python script, `get_realtime.py` is employed. This script uses the Paramiko library for SSH connections and commands, psycopg2 for PostgreSQL database interaction, and dotenv for environment variable management. The script is executed on a local machine and connects to a remote server to download the most recent data from the `trip_updates` table. The data is then stored in a local CSV file, which is then used to update the `trip_updates` table in the local database.
@@ -183,7 +189,15 @@ To access the dashboard you can follow this link: [Sudbury's Transit Efficiency 
 
 ## Future Work
 
-- [ ] Add weather data to the database to see how it affects bus timeliness.
+- [x] Add weather data to the database to see how it affects bus timeliness.
+- [ ] Add holidays to the database to see how it affects bus timeliness.
+- [ ] Create a machine learning model to predict bus timeliness.
 
 ## License
 This project is licensed under the terms of the [MIT License](LICENSE.md).
+
+## Contact Information
+If you have any queries or suggestions, feel free to reach out:
+
+E-mail: andre.szlima1@gmail.com
+LinkedIn: https://www.linkedin.com/in/andreszlima/
