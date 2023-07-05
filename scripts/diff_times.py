@@ -65,6 +65,7 @@ def populate_table():
         END AS average_diff_in_minutes,
         tu.weather_group,
         tu.weather_description,
+        tu.temperature,
         CASE
             WHEN EXTRACT(DOW FROM gd.arrival_time AT TIME ZONE 'UTC' AT TIME ZONE 'America/Toronto') = 0 THEN 'Sunday'
             WHEN EXTRACT(DOW FROM gd.arrival_time AT TIME ZONE 'UTC' AT TIME ZONE 'America/Toronto') = 1 THEN 'Monday'

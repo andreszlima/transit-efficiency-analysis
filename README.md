@@ -166,13 +166,15 @@ Historical data, which is stored in `gtfs_data` table, provides general informat
 4. **Execution:**
     The `realtime_extractor.py` script is executed on a regular basis on a remote server. This script pulls data from the GTFS real-time feed and stores it in the `trip_updates` table. The `historical_extractor.py` script, on the other hand, should be run manually as needed to pull and store historical data in the `gtfs_data` table.
 
-    You can set the `realtime_extractor.py` script to run as a cron job on your remote server. To make the script run every minute, edit the crontab file with `crontab -e` and add the following line:
+    You can set the `realtime_extractor.py` and `diff_times.py` scripts to run as [cron jobs](https://en.wikipedia.org/wiki/Cron) on your remote server. To make the `realtime_extractor.py` every minute and the `diff_times.py` every 10 minutes, edit the crontab file with `crontab -e` and add the following lines:
 
     ```bash
-    * * * * * /usr/bin/python3 /path/to/realtime_extractor.py
+    * * * * * python3 ~/transit-efficiency-analysis/scripts/realtime_extractor.py >> ~/transit-efficiency-analysis/logs/realtime_extractor.txt
+    */10 * * * * python3 ~/transit-efficiency-analysis/scripts/diff_times.py >> ~/transit-efficiency-analysis/logs/diff_times.txt
+
     ```
     
-    Be sure to replace `/path/to/realtime_extractor.py` with the actual path to the Python script on your server.
+    Be sure to replace `~/transit-efficiency-analysis/` with the actual path to the project's folder on your server, both in the script part and in the log file part.
 
 5. **Data Transfer:**
     Since the analysis that will be made here are costly in terms of computer power, I decided to do it locally instead of on the remote computer, which is somewhat limited. To do this a Python script, `get_realtime.py` is employed. This script uses the Paramiko library for SSH connections and commands, psycopg2 for PostgreSQL database interaction, and dotenv for environment variable management. The script is executed on a local machine and connects to a remote server to download the most recent data from the `trip_updates` table. The data is then stored in a local CSV file, which is then used to update the `trip_updates` table in the local database.
