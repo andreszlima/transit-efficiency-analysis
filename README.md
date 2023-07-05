@@ -21,9 +21,13 @@ Historical data, which is stored in `gtfs_data` table, provides general informat
 
 ## Setup & Execution
 
-0. **Firewall**
+0. **Firewall and resources**
 
     Make sure security groups are set up properly to allow SSH and PostgreSQL connections to your VPS so you can tinker with it. TCP Connection to port 22 should be allowed for SSH and TCP Connection to port 5432 should be allowed for PostgreSQL.
+
+    This software runs (alarming on high CPU usage, but runs) on AWS's free tier t2.micro instance. You can set up a VPS on AWS and install Ubuntu 22.04 on it. You can also use other VPS providers like DigitalOcean, Linode, etc. Just make sure you have enough resources to run the software.
+
+    Tried this on Oracle's free tier but it freezes with high CPU usage, so I don't recommend it.
 
 1. **Dependencies**
     This project requires the following Python libraries:
