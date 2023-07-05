@@ -55,7 +55,7 @@ Historical data, which is stored in `gtfs_data` table, provides general informat
 
     Ensure that the Python packages are installed in the same environment where you intend to run your Python scripts.
 
-    Additionally, the `lib` module (a local module in this project) is used. This module is a folder containing generated protocol buffer code to handle GTFS data. Please ensure this is properly set up in your environment. It is located in the `lib` folder, inside the root folder of this repository.
+    Additionally, the `lib` module (a local module in this project) is used. This module is a folder containing generated protocol buffer code to handle GTFS data. Please ensure this is properly set up in your environment. It is located in the `lib` folder, inside the root folder of this repository. No additional steps needed, just make sure it's there.
 
 2. **Environment Setup:**
     The project uses environment variables for configuration. These can be set manually, but for ease of use, it's recommended to store them in an `.env` file. The python scripts will search for this file inside `scripts` folder. This file should not be committed to version control.
