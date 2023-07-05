@@ -1,11 +1,16 @@
 import os
 from dotenv import load_dotenv
 import psycopg2
+from datetime import datetime, timedelta
 
 # Load .env file
 load_dotenv()
 
 def populate_table():
+
+    # Get current datetime in UTC
+    now = datetime.utcnow().replace(tzinfo=pytz.UTC)
+
     conn = psycopg2.connect(
         database=os.getenv("LOCAL_DB_NAME"),
         user=os.getenv("LOCAL_DB_USERNAME"),
@@ -94,6 +99,7 @@ def populate_table():
     conn.close()
 
     print('Diff times table populated!')
+    print('Current Datetime:', now)
 
 if __name__ == "__main__":
     populate_table()

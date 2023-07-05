@@ -168,6 +168,7 @@ def main():
                 conn.execute(insert_query, {**row.to_dict(), 'created_at': now, 'updated_at': now})
             conn.commit()
         print('Data inserted.')
+        print('Current Datetime:', now)
     except Exception as e:
         print(f"Error occurred while inserting data into the database: {e}")
 
