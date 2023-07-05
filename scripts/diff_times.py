@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 import psycopg2
 from datetime import datetime, timedelta
+import pytz
 
 # Load .env file
 load_dotenv()

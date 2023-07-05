@@ -96,8 +96,14 @@ def parse_pb_data(data):
             trip_id = entity.trip_update.trip.trip_id
             start_date = entity.trip_update.trip.start_date
             for update in entity.trip_update.stop_time_update:
-                departure_time = pd.to_datetime(update.departure.time, unit='s', utc=True) if update.HasField('departure') else pd.Timestamp('1970-01-01', tz='UTC')
-                arrival_time = pd.to_datetime(update.arrival.time, unit='s', utc=True) if update.HasField('arrival') else pd.Timestamp('1970-01-01', tz='UTC')
+                if update.HasField('departure') and update.departure.time != 0:
+                    departure_time = pd.to_datetime(update.departure.time, unit='s', utc=True)
+                else:
+                    departure_time = None
+                if update.HasField('arrival') and update.arrival.time != 0:
+                    arrival_time = pd.to_datetime(update.arrival.time, unit='s', utc=True)
+                else:
+                    arrival_time = None
                 parsed_data.append({
                     'trip_id': trip_id,
                     'start_date': start_date,
@@ -108,6 +114,7 @@ def parse_pb_data(data):
                 })
 
     return pd.DataFrame(parsed_data)
+
 
 def main():
     # Create engine
