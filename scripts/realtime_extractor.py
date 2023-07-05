@@ -145,25 +145,32 @@ def main():
                         VALUES (:trip_id, :start_date, :stop_sequence, :stop_id, :arrival_time, :departure_time, :weather_group, :weather_description, :created_at)
                         ON CONFLICT (trip_id, start_date, stop_sequence, stop_id) 
                         DO UPDATE SET 
-                          arrival_time = EXCLUDED.arrival_time,
-                          departure_time = EXCLUDED.departure_time,
-                          weather_group = EXCLUDED.weather_group, 
-                          weather_description = EXCLUDED.weather_description,
-                          updated_at = :updated_at""")
+                        arrival_time = EXCLUDED.arrival_time,
+                        departure_time = EXCLUDED.departure_time,
+                        weather_group = EXCLUDED.weather_group, 
+                        weather_description = EXCLUDED.weather_description,
+                        updated_at = :updated_at
+                        WHERE 
+                        {table_name}.arrival_time != EXCLUDED.arrival_time OR
+                        {table_name}.departure_time != EXCLUDED.departure_time""")
                 else:
                     insert_query = text(f"""
                         INSERT INTO {table_name} (trip_id, start_date, stop_sequence, stop_id, arrival_time, departure_time, created_at)
                         VALUES (:trip_id, :start_date, :stop_sequence, :stop_id, :arrival_time, :departure_time, :created_at)
                         ON CONFLICT (trip_id, start_date, stop_sequence, stop_id) 
                         DO UPDATE SET 
-                          arrival_time = EXCLUDED.arrival_time,
-                          departure_time = EXCLUDED.departure_time,
-                          updated_at = :updated_at""")
+                        arrival_time = EXCLUDED.arrival_time,
+                        departure_time = EXCLUDED.departure_time,
+                        updated_at = :updated_at
+                        WHERE 
+                        {table_name}.arrival_time != EXCLUDED.arrival_time OR
+                        {table_name}.departure_time != EXCLUDED.departure_time""")
                 conn.execute(insert_query, {**row.to_dict(), 'created_at': now, 'updated_at': now})
             conn.commit()
         print('Data inserted.')
     except Exception as e:
         print(f"Error occurred while inserting data into the database: {e}")
+
 
 if __name__ == "__main__":
     main()

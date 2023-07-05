@@ -21,6 +21,10 @@ Historical data, which is stored in `gtfs_data` table, provides general informat
 
 ## Setup & Execution
 
+0. **Firewall**
+
+    Make sure security groups are set up properly to allow SSH and PostgreSQL connections to your VPS so you can tinker with it. TCP Connection to port 22 should be allowed for SSH and TCP Connection to port 5432 should be allowed for PostgreSQL.
+
 1. **Dependencies**
     This project requires the following Python libraries:
 
@@ -36,6 +40,13 @@ Historical data, which is stored in `gtfs_data` table, provides general informat
     You can install all these packages using pip:
 
     ```shell
+    # Install pip
+    sudo apt-get install python3-pip
+
+    # Install libpq-dev for psycopg2
+    sudo apt-get install libpq-dev
+
+    # Install the required packages
     pip install pandas pytz requests python-dotenv protobuf sqlalchemy psycopg2 paramiko
     ```
 
@@ -73,7 +84,7 @@ Historical data, which is stored in `gtfs_data` table, provides general informat
     VPS_USERNAME=<Your VPS Username>
     # VPS server IP
     VPS_SERVER_IP=<Your VPS Server IP>
-    # Path to the csv file in the local machine
+    # Path to put the csv file in the local machine : '/Users/xxxxxx/data.csv'
     LOCAL_CSV_FILE_PATH=<Path to your local csv file. it is erased after updating the table>
     # Path to your private key file
     PRIVATE_KEY_PATH=<Path to your private key file>
