@@ -96,14 +96,8 @@ def parse_pb_data(data):
             trip_id = entity.trip_update.trip.trip_id
             start_date = entity.trip_update.trip.start_date
             for update in entity.trip_update.stop_time_update:
-                if update.HasField('departure') and update.departure.time != 0:
-                    departure_time = pd.to_datetime(update.departure.time, unit='s', utc=True)
-                else:
-                    departure_time = None
-                if update.HasField('arrival') and update.arrival.time != 0:
-                    arrival_time = pd.to_datetime(update.arrival.time, unit='s', utc=True)
-                else:
-                    arrival_time = None
+                departure_time = pd.to_datetime(update.departure.time, unit='s', utc=True) if update.HasField('departure') else None
+                arrival_time = pd.to_datetime(update.arrival.time, unit='s', utc=True) if update.HasField('arrival') else None
                 parsed_data.append({
                     'trip_id': trip_id,
                     'start_date': start_date,
@@ -114,6 +108,7 @@ def parse_pb_data(data):
                 })
 
     return pd.DataFrame(parsed_data)
+
 
 
 def main():
@@ -144,6 +139,10 @@ def main():
 
     # Get current datetime in UTC
     now = datetime.utcnow().replace(tzinfo=pytz.UTC)
+
+    # Replace 'NaT' with None
+    df['arrival_time'].replace({pd.NaT: None}, inplace=True)
+    df['departure_time'].replace({pd.NaT: None}, inplace=True)
 
     # Insert data into the database
     try:
@@ -187,6 +186,7 @@ def main():
             print('Current Datetime:', now)
     except Exception as e:
         print(f"Error occurred while inserting data into the database: {e}")
+
 
 
 
