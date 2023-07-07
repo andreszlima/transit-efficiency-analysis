@@ -3,6 +3,7 @@ import pandas as pd
 import requests
 import json
 import pytz
+import fasteners
 from pathlib import Path
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
@@ -13,6 +14,12 @@ from sqlalchemy import create_engine, text
 
 # Load environment variables
 load_dotenv()
+
+# Get the absolute path to the directory of this script
+script_dir = Path(os.path.dirname(os.path.abspath(__file__)))
+
+# Create the lock file in the script directory
+LOCK_FILE = script_dir / "script.lock"
 
 # URL to download the data
 url = "https://sudbury.tmix.se/gtfs-realtime/tripupdates.pb"
@@ -112,84 +119,104 @@ def parse_pb_data(data):
 
 
 def main():
-    # Create engine
-    engine = create_engine(db_string)
-    
+
+    # Create a lock file to prevent multiple instances of the script from running at the same time
+    lock = fasteners.InterProcessLock(LOCK_FILE)
+    gotten = lock.acquire(blocking=False)
+    if not gotten:
+        print("Another instance of the script is running. Exiting this run.")
+        sys.exit()
+
+    # Run the script
     try:
-        # Download data
-        print('Downloading data...')
-        response = requests.get(url)
-        response.raise_for_status()
-        print('Download complete.')
-    except requests.exceptions.RequestException as e:
-        print(f"Error occurred while downloading data: {e}")
-        return
+        # Create engine
+        engine = create_engine(db_string)
+        
+        try:
+            # Download data
+            print('Downloading data...')
+            response = requests.get(url)
+            response.raise_for_status()  # This will raise an HTTPError for 4xx or 5xx status codes
+            print('Download complete.')
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 503:  # If it's a 503 error, just return and end the current run
+                print('Server is unavailable. Skipping this run.')
+                return
+            else:  # For other HTTP errors, you might want to raise the error or handle it differently
+                print(f"Error occurred while downloading data: {e}")
+                return
+        except requests.exceptions.RequestException as e:  # For non-HTTP errors
+            print(f"Error occurred while downloading data: {e}")
+            return
 
-    try:
-        # Parse data
-        print('Parsing data...')
-        df = parse_pb_data(response.content)
-        print('Parsing complete.')
-    except Exception as e:
-        print(f"Error occurred while parsing data: {e}")
-        return
+        try:
+            # Parse data
+            print('Parsing data...')
+            df = parse_pb_data(response.content)
+            print('Parsing complete.')
+        except Exception as e:
+            print(f"Error occurred while parsing data: {e}")
+            return
 
-    # Get weather data
-    weather_data = get_weather_data()
+        # Get weather data
+        weather_data = get_weather_data()
 
-    # Get current datetime in UTC
-    now = datetime.utcnow().replace(tzinfo=pytz.UTC)
+        # Get current datetime in UTC
+        now = datetime.utcnow().replace(tzinfo=pytz.UTC)
 
-    # Replace 'NaT' with None
-    df['arrival_time'].replace({pd.NaT: None}, inplace=True)
-    df['departure_time'].replace({pd.NaT: None}, inplace=True)
+        # Replace 'NaT' with None
+        df['arrival_time'].replace({pd.NaT: None}, inplace=True)
+        df['departure_time'].replace({pd.NaT: None}, inplace=True)
 
-    # Insert data into the database
-    try:
-        with engine.connect() as conn:
-            for _, row in df.iterrows():
-                if weather_data is not None:
-                    row['weather_group'] = weather_data['weather_group']
-                    row['weather_description'] = weather_data['weather_description']
-                    row['temperature'] = weather_data['temperature']  # add temperature
-                    insert_query = text(f"""
-                        INSERT INTO {table_name} (trip_id, start_date, stop_sequence, stop_id, arrival_time, departure_time, weather_group, weather_description, temperature, created_at)
-                        VALUES (:trip_id, :start_date, :stop_sequence, :stop_id, :arrival_time, :departure_time, :weather_group, :weather_description, :temperature, :created_at)
-                        ON CONFLICT (trip_id, start_date, stop_sequence, stop_id) 
-                        DO UPDATE SET 
-                        arrival_time = EXCLUDED.arrival_time,
-                        departure_time = EXCLUDED.departure_time,
-                        weather_group = EXCLUDED.weather_group, 
-                        weather_description = EXCLUDED.weather_description,
-                        temperature = EXCLUDED.temperature,
-                        updated_at = :updated_at
-                        WHERE 
-                        {table_name}.arrival_time != EXCLUDED.arrival_time OR
-                        {table_name}.departure_time != EXCLUDED.departure_time""")
-                else:
-                    insert_query = text(f"""
-                        INSERT INTO {table_name} (trip_id, start_date, stop_sequence, stop_id, arrival_time, departure_time, created_at)
-                        VALUES (:trip_id, :start_date, :stop_sequence,:stop_id, :arrival_time, :departure_time, :created_at)
-                        ON CONFLICT (trip_id, start_date, stop_sequence, stop_id) 
-                        DO UPDATE SET 
-                        arrival_time = EXCLUDED.arrival_time,
-                        departure_time = EXCLUDED.departure_time,
-                        updated_at = :updated_at
-                        WHERE 
-                        {table_name}.arrival_time != EXCLUDED.arrival_time OR
-                        {table_name}.departure_time != EXCLUDED.departure_time""")
+        # Insert data into the database
+        try:
+            with engine.connect() as conn:
+                print('Initiated database connection.')
+                for _, row in df.iterrows():
+                    print('Processing data row...')
+                    if weather_data is not None:
+                        row['weather_group'] = weather_data['weather_group']
+                        row['weather_description'] = weather_data['weather_description']
+                        row['temperature'] = weather_data['temperature']  # add temperature
+                        insert_query = text(f"""
+                            INSERT INTO {table_name} (trip_id, start_date, stop_sequence, stop_id, arrival_time, departure_time, weather_group, weather_description, temperature, created_at)
+                            VALUES (:trip_id, :start_date, :stop_sequence, :stop_id, :arrival_time, :departure_time, :weather_group, :weather_description, :temperature, :created_at)
+                            ON CONFLICT (trip_id, start_date, stop_sequence, stop_id) 
+                            DO UPDATE SET 
+                            arrival_time = EXCLUDED.arrival_time,
+                            departure_time = EXCLUDED.departure_time,
+                            weather_group = EXCLUDED.weather_group, 
+                            weather_description = EXCLUDED.weather_description,
+                            temperature = EXCLUDED.temperature,
+                            updated_at = :updated_at
+                            WHERE 
+                            {table_name}.arrival_time != EXCLUDED.arrival_time OR
+                            {table_name}.departure_time != EXCLUDED.departure_time""")
+                    else:
+                        insert_query = text(f"""
+                            INSERT INTO {table_name} (trip_id, start_date, stop_sequence, stop_id, arrival_time, departure_time, created_at)
+                            VALUES (:trip_id, :start_date, :stop_sequence,:stop_id, :arrival_time, :departure_time, :created_at)
+                            ON CONFLICT (trip_id, start_date, stop_sequence, stop_id) 
+                            DO UPDATE SET 
+                            arrival_time = EXCLUDED.arrival_time,
+                            departure_time = EXCLUDED.departure_time,
+                            updated_at = :updated_at
+                            WHERE 
+                            {table_name}.arrival_time != EXCLUDED.arrival_time OR
+                            {table_name}.departure_time != EXCLUDED.departure_time""")
 
-                # Create a Transaction object and execute the insert query
-                with conn.begin():
-                    conn.execute(insert_query, {**row.to_dict(), 'created_at': now, 'updated_at': now})
-            print('Data inserted.')
-            print('Current Datetime:', now)
-    except Exception as e:
-        print(f"Error occurred while inserting data into the database: {e}")
+                    # Create a Transaction object and execute the insert query
+                    with conn.begin():
+                        print('Executing database transaction...')
+                        conn.execute(insert_query, {**row.to_dict(), 'created_at': now, 'updated_at': now})
+                    print('Finished processing row.')
+                print('Data inserted.')
+                print('Current Datetime:', now)
+        except Exception as e:
+            print(f"Error occurred while inserting data into the database: {e}")
 
-
-
-
+    finally:
+        lock.release()
 
 if __name__ == "__main__":
     main()
