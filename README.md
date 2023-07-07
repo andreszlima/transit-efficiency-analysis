@@ -14,6 +14,8 @@ The data used in this project is sourced from the [Sudbury's open data Portal](h
 
 Historical data, which is stored in `gtfs_data` table, provides general information about transit agencies, routes, stops, and scheduled service. Real-time data, on the other hand, is stored in `trip_updates` table and provides live updates about the actual position of buses and their predicted arrival times. By comparing scheduled and actual arrival times, we aim to analyze the timeliness and efficiency of Sudbury's bus service. 
 
+It is also being used OpenWeatherMap for precise weather data, to analyse the impact of weather on the bus service.
+
 ## Tools and Technologies
 * Python for data gathering, data cleaning, and analysis. Key libraries used include Pandas for data manipulation, requests for data downloading, and SQLAlchemy for database connection.
 * PostgreSQL for data storage and management. Database queries are written in SQL for extracting insights from the data.
@@ -24,9 +26,9 @@ Historical data, which is stored in `gtfs_data` table, provides general informat
 0. **Firewall and resources**
     Make sure security groups are set up properly to allow SSH and PostgreSQL connections to your VPS so you can tinker with it. TCP Connection to port 22 should be allowed for SSH and TCP Connection to port 5432 should be allowed for PostgreSQL.
 
-    This software runs (alarming on high CPU usage, but runs) on AWS's free tier t2.micro instance. You can set up a VPS on AWS and install Ubuntu 22.04 on it. You can also use other VPS providers like DigitalOcean, Linode, etc. Just make sure you have enough resources to run the software.
+    Python is a resource intensive language. Coupled with data engineering and you have a heavy workload (RAM intensive) in front of you. I've added a way to lock multiple scripts from running at the same time. This is done using a lock file. The lock file is located in the `scripts` folder. So my recommendation is to put the cron job to run every minute, because this lock can restrict the script from running again if it hasn't finished yet because of a low end VPS.
 
-    Tried this on Oracle's free tier but it freezes with high CPU usage, so I don't recommend it.
+    If you have a high end VPS, you can run the script every 30 seconds or even every 10 seconds via cron job. With less time between runs, you can get more accurate data. But be careful, if you run the script too often, you might get banned from the API.
 
 1. **Dependencies**
     This project requires the following Python libraries:
@@ -39,6 +41,7 @@ Historical data, which is stored in `gtfs_data` table, provides general informat
     - **sqlalchemy**: A SQL toolkit and Object-Relational Mapping (ORM) system for Python, providing a full suite of well known enterprise-level persistence patterns.
     - **psycopg2**: A PostgreSQL database adapter for Python.
     - **paramiko**: A Python (2.7, 3.4+) implementation of the SSHv2 protocol, providing both client and server functionality.
+    - **fasteners**: A python package that provides useful locks.
 
     You can install all these packages using pip:
 
@@ -50,7 +53,7 @@ Historical data, which is stored in `gtfs_data` table, provides general informat
     sudo apt-get install libpq-dev
 
     # Install the required packages
-    pip install pandas pytz requests python-dotenv protobuf sqlalchemy psycopg2 paramiko
+    pip install pandas pytz requests python-dotenv protobuf sqlalchemy psycopg2 paramiko fasteners
     ```
 
     Ensure that the Python packages are installed in the same environment where you intend to run your Python scripts.
@@ -193,7 +196,7 @@ To access the dashboard you can follow this link: [Sudbury's Transit Efficiency 
 
 1. **Bus Timeliness**
 
-    This analysis has shown which times of the day are the most and least efficient in terms of bus timeliness. It was possible to filter by routes, stops, time of day, and day of the week. The results are shown in the form of a bar chart.
+    This analysis has shown which times of the day are the most and least efficient in terms of bus timeliness. It was possible to filter by weather conditions, routes, stops, time of day, and day of the week. The results are shown in the form of a bar chart.
 
 2. **Route Efficiency**
 
