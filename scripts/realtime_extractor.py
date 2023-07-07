@@ -120,6 +120,9 @@ def parse_pb_data(data):
 
 def main():
 
+    # Get the start time of this run
+    start_time = datetime.now()
+
     # Create a lock file to prevent multiple instances of the script from running at the same time
     lock = fasteners.InterProcessLock(LOCK_FILE)
     gotten = lock.acquire(blocking=False)
@@ -129,6 +132,10 @@ def main():
 
     # Run the script
     try:
+
+        # Print datetime of the start of this run
+        print(f"Starting run at {datetime.now()}")
+
         # Create engine
         engine = create_engine(db_string)
         
@@ -171,9 +178,13 @@ def main():
         # Insert data into the database
         try:
             with engine.connect() as conn:
+                # Start counter
+                counter = 0
+                # First print to initiate database connection
                 print('Initiated database connection.')
                 for _, row in df.iterrows():
-                    print('Processing data row...')
+                    # Counter to count the number of rows inserted
+                    counter += 1
                     if weather_data is not None:
                         row['weather_group'] = weather_data['weather_group']
                         row['weather_description'] = weather_data['weather_description']
@@ -207,16 +218,20 @@ def main():
 
                     # Create a Transaction object and execute the insert query
                     with conn.begin():
-                        print('Executing database transaction...')
                         conn.execute(insert_query, {**row.to_dict(), 'created_at': now, 'updated_at': now})
-                    print('Finished processing row.')
-                print('Data inserted.')
-                print('Current Datetime:', now)
+                # Print the amount of rows inserted
+                print(f"Inserted {counter} rows into the database.")
+                # Print the ending datetime of this run
+                print(f"Ending run at {datetime.now()}")
         except Exception as e:
             print(f"Error occurred while inserting data into the database: {e}")
 
     finally:
         lock.release()
+
+    end_time = datetime.now()
+    execution_time = end_time - start_time
+    print(f"Script execution time: {execution_time.total_seconds():.2f} seconds")
 
 if __name__ == "__main__":
     main()
