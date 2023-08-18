@@ -179,6 +179,8 @@ It is also being used OpenWeatherMap for precise weather data, to analyse the im
     
     Be sure to replace `~/transit-efficiency-analysis/` with the actual path to the project's folder on your server, both in the script part and in the log file part.
 
+    LESSON LEARNED: After changing month be sure the script is still running. I will implement a timeout
+
 5. **Data Transfer:**
     Since the analysis that will be made here are costly in terms of computer power, I decided to do it locally instead of on the remote computer, which is somewhat limited. To do this a Python script, `get_realtime.py` is employed. This script uses the Paramiko library for SSH connections and commands, psycopg2 for PostgreSQL database interaction, and dotenv for environment variable management. The script is executed on a local machine and connects to a remote server to download the most recent data from the `trip_updates` table. The data is then stored in a local CSV file, which is then used to update the `trip_updates` table in the local database.
 

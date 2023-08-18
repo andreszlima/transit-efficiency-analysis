@@ -4,6 +4,7 @@ import requests
 import json
 import pytz
 import fasteners
+import signal
 from pathlib import Path
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
@@ -130,104 +131,122 @@ def main():
         print("Another instance of the script is running. Exiting this run.")
         sys.exit()
 
-    # Run the script
+    # Set the timeout period in seconds
+    timeout_seconds = 30 * 60  # 30 minutes
+
+    # Define a function to handle timeouts
+    def timeout_handler(signum, frame):
+        raise TimeoutError("Script execution timed out")
+
+    # Set the timeout signal handler
+    signal.signal(signal.SIGALRM, timeout_handler)
+    signal.alarm(timeout_seconds)  # Set the alarm
+
+
     try:
-
-        # Print datetime of the start of this run
-        print(f"Starting run at {datetime.now()}")
-
-        # Create engine
-        engine = create_engine(db_string)
-        
         try:
-            # Download data
-            print('Downloading data...')
-            response = requests.get(url)
-            response.raise_for_status()  # This will raise an HTTPError for 4xx or 5xx status codes
-            print('Download complete.')
-        except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 503:  # If it's a 503 error, just return and end the current run
-                print('Server is unavailable. Skipping this run.')
-                return
-            else:  # For other HTTP errors, you might want to raise the error or handle it differently
+
+            # Print datetime of the start of this run
+            print(f"Starting run at {datetime.now()}")
+
+            # Create engine
+            engine = create_engine(db_string)
+            
+            try:
+                # Download data
+                print('Downloading data...')
+                response = requests.get(url)
+                response.raise_for_status()  # This will raise an HTTPError for 4xx or 5xx status codes
+                print('Download complete.')
+            except requests.exceptions.HTTPError as e:
+                if e.response.status_code == 503:  # If it's a 503 error, just return and end the current run
+                    print('Server is unavailable. Skipping this run.')
+                    return
+                else:  # For other HTTP errors, you might want to raise the error or handle it differently
+                    print(f"Error occurred while downloading data: {e}")
+                    return
+            except requests.exceptions.RequestException as e:  # For non-HTTP errors
                 print(f"Error occurred while downloading data: {e}")
                 return
-        except requests.exceptions.RequestException as e:  # For non-HTTP errors
-            print(f"Error occurred while downloading data: {e}")
-            return
 
-        try:
-            # Parse data
-            print('Parsing data...')
-            df = parse_pb_data(response.content)
-            print('Parsing complete.')
-        except Exception as e:
-            print(f"Error occurred while parsing data: {e}")
-            return
+            try:
+                # Parse data
+                print('Parsing data...')
+                df = parse_pb_data(response.content)
+                print('Parsing complete.')
+            except Exception as e:
+                print(f"Error occurred while parsing data: {e}")
+                return
 
-        # Get weather data
-        weather_data = get_weather_data()
+            # Get weather data
+            weather_data = get_weather_data()
 
-        # Get current datetime in UTC
-        now = datetime.utcnow().replace(tzinfo=pytz.UTC)
+            # Get current datetime in UTC
+            now = datetime.utcnow().replace(tzinfo=pytz.UTC)
 
-        # Replace 'NaT' with None
-        df['arrival_time'].replace({pd.NaT: None}, inplace=True)
-        df['departure_time'].replace({pd.NaT: None}, inplace=True)
+            # Replace 'NaT' with None
+            df['arrival_time'].replace({pd.NaT: None}, inplace=True)
+            df['departure_time'].replace({pd.NaT: None}, inplace=True)
 
-        # Insert data into the database
-        try:
-            with engine.connect() as conn:
-                # Start counter
-                counter = 0
-                # First print to initiate database connection
-                print('Initiated database connection.')
-                for _, row in df.iterrows():
-                    # Counter to count the number of rows inserted
-                    counter += 1
-                    if weather_data is not None:
-                        row['weather_group'] = weather_data['weather_group']
-                        row['weather_description'] = weather_data['weather_description']
-                        row['temperature'] = weather_data['temperature']  # add temperature
-                        insert_query = text(f"""
-                            INSERT INTO {table_name} (trip_id, start_date, stop_sequence, stop_id, arrival_time, departure_time, weather_group, weather_description, temperature, created_at)
-                            VALUES (:trip_id, :start_date, :stop_sequence, :stop_id, :arrival_time, :departure_time, :weather_group, :weather_description, :temperature, :created_at)
-                            ON CONFLICT (trip_id, start_date, stop_sequence, stop_id) 
-                            DO UPDATE SET 
-                            arrival_time = EXCLUDED.arrival_time,
-                            departure_time = EXCLUDED.departure_time,
-                            weather_group = EXCLUDED.weather_group, 
-                            weather_description = EXCLUDED.weather_description,
-                            temperature = EXCLUDED.temperature,
-                            updated_at = :updated_at
-                            WHERE 
-                            {table_name}.arrival_time != EXCLUDED.arrival_time OR
-                            {table_name}.departure_time != EXCLUDED.departure_time""")
-                    else:
-                        insert_query = text(f"""
-                            INSERT INTO {table_name} (trip_id, start_date, stop_sequence, stop_id, arrival_time, departure_time, created_at)
-                            VALUES (:trip_id, :start_date, :stop_sequence,:stop_id, :arrival_time, :departure_time, :created_at)
-                            ON CONFLICT (trip_id, start_date, stop_sequence, stop_id) 
-                            DO UPDATE SET 
-                            arrival_time = EXCLUDED.arrival_time,
-                            departure_time = EXCLUDED.departure_time,
-                            updated_at = :updated_at
-                            WHERE 
-                            {table_name}.arrival_time != EXCLUDED.arrival_time OR
-                            {table_name}.departure_time != EXCLUDED.departure_time""")
+            # Insert data into the database
+            try:
+                with engine.connect() as conn:
+                    # Start counter
+                    counter = 0
+                    # First print to initiate database connection
+                    print('Initiated database connection.')
+                    for _, row in df.iterrows():
+                        # Counter to count the number of rows inserted
+                        counter += 1
+                        if weather_data is not None:
+                            row['weather_group'] = weather_data['weather_group']
+                            row['weather_description'] = weather_data['weather_description']
+                            row['temperature'] = weather_data['temperature']  # add temperature
+                            insert_query = text(f"""
+                                INSERT INTO {table_name} (trip_id, start_date, stop_sequence, stop_id, arrival_time, departure_time, weather_group, weather_description, temperature, created_at)
+                                VALUES (:trip_id, :start_date, :stop_sequence, :stop_id, :arrival_time, :departure_time, :weather_group, :weather_description, :temperature, :created_at)
+                                ON CONFLICT (trip_id, start_date, stop_sequence, stop_id) 
+                                DO UPDATE SET 
+                                arrival_time = EXCLUDED.arrival_time,
+                                departure_time = EXCLUDED.departure_time,
+                                weather_group = EXCLUDED.weather_group, 
+                                weather_description = EXCLUDED.weather_description,
+                                temperature = EXCLUDED.temperature,
+                                updated_at = :updated_at
+                                WHERE 
+                                {table_name}.arrival_time != EXCLUDED.arrival_time OR
+                                {table_name}.departure_time != EXCLUDED.departure_time""")
+                        else:
+                            insert_query = text(f"""
+                                INSERT INTO {table_name} (trip_id, start_date, stop_sequence, stop_id, arrival_time, departure_time, created_at)
+                                VALUES (:trip_id, :start_date, :stop_sequence,:stop_id, :arrival_time, :departure_time, :created_at)
+                                ON CONFLICT (trip_id, start_date, stop_sequence, stop_id) 
+                                DO UPDATE SET 
+                                arrival_time = EXCLUDED.arrival_time,
+                                departure_time = EXCLUDED.departure_time,
+                                updated_at = :updated_at
+                                WHERE 
+                                {table_name}.arrival_time != EXCLUDED.arrival_time OR
+                                {table_name}.departure_time != EXCLUDED.departure_time""")
 
-                    # Create a Transaction object and execute the insert query
-                    with conn.begin():
-                        conn.execute(insert_query, {**row.to_dict(), 'created_at': now, 'updated_at': now})
-                # Print the amount of rows inserted
-                print(f"Inserted {counter} rows into the database.")
-                # Print the ending datetime of this run
-                print(f"Ending run at {datetime.now()}")
-        except Exception as e:
-            print(f"Error occurred while inserting data into the database: {e}")
+                        # Create a Transaction object and execute the insert query
+                        with conn.begin():
+                            conn.execute(insert_query, {**row.to_dict(), 'created_at': now, 'updated_at': now})
+                    # Print the amount of rows inserted
+                    print(f"Inserted {counter} rows into the database.")
+                    # Print the ending datetime of this run
+                    print(f"Ending run at {datetime.now()}")
+            except Exception as e:
+                print(f"Error occurred while inserting data into the database: {e}")
 
+        finally:
+            lock.release()
+    except TimeoutError as e:
+        print(f"Timeout error: {e}")
+        sys.exit(1)  # Exit the script with an error code
     finally:
-        lock.release()
+        signal.alarm(0)  # Cancel the alarm
+
 
     end_time = datetime.now()
     execution_time = end_time - start_time
